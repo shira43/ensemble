@@ -13,7 +13,7 @@ from datetime import datetime
 from sklearn.metrics import accuracy_score
 import argparse, shutil, logging
 from torch.optim import lr_scheduler
-from model import BertClassifier, DebertaClassifier
+from model.models import BertClassifier, DebertaClassifier
 from torch.utils.data import DataLoader, Dataset, Sampler
 
 from sklearn.metrics import roc_curve, roc_auc_score, auc,precision_score, f1_score, accuracy_score, recall_score

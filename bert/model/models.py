@@ -24,10 +24,11 @@ class DebertaClassifier(th.nn.Module):
         super(DebertaClassifier, self).__init__()
         self.nb_class = nb_class
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
-        self.Deberta_model = AutoModelForSequenceClassification.from_pretrained(pretrained_model,num_labels=self.nb_class)
+        # Changed from Deberta_model to bert_model (so we can load the checkpoint uniformly)
+        self.bert_model = AutoModelForSequenceClassification.from_pretrained(pretrained_model, num_labels=self.nb_class)
 
     def forward(self, input_ids, attention_mask):
-        logit = self.Deberta_model(input_ids, attention_mask).logits
+        logit = self.bert_model(input_ids, attention_mask).logits
         return logit
 
 
