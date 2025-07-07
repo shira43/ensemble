@@ -2,6 +2,7 @@ import sys
 from argparse import Namespace
 
 import pandas as pd
+#from fairseq.benchmark.benchmark_multihead_attention import BATCH
 from tqdm import tqdm
 
 from datasets import Dataset
@@ -28,6 +29,7 @@ class SeqXGPTWrapper:
         self.input_file = input_file
         self.output_file = output_file
         self.ckpt_name = ckpt_name
+        self.seq_len = seq_len
 
         # Create a Namespace object mimicking argparse
         args = Namespace(
@@ -59,6 +61,52 @@ class SeqXGPTWrapper:
         self.model = loaded_model
 
         return self.model
+
+
+    def _compress_logits(self, logits, labels):
+        """
+        Compresses the logits from (batch_size, seq_len, num_classes=12) to (batch_size, num_classes=3), to follow more standard conventions
+
+        :param logits: logits tensor of seqXGPT forward pass (batch_size, seq_len, num_classes=12) -> classes: id2label
+        :param labels: labels of features (needed to find end of tokens and beginning of pad tokens)
+        :return: logits tensor (batch_size, num_classes=3)  -> classes (api, user_and_api, human)
+        """
+
+        batch_size = logits.size(0)
+        final_logits = torch.zeros(batch_size, 3)
+
+        for batch_idx, sequence in enumerate(logits):  # sequence: [seq_len, num_classes]
+            seq_labels = labels[batch_idx].tolist()
+            try:
+                first_pad_idx = seq_labels.index(-1)
+                temp_logits = torch.zeros(first_pad_idx, 3)
+            except ValueError:
+                first_pad_idx = self.seq_len + 1
+                temp_logits = torch.zeros(self.seq_len, 3)
+
+            for token_idx, token_logits in enumerate(sequence):  # token_logits: [num_classes]
+                if token_idx >= first_pad_idx:
+                    break
+                else:
+                    if token_idx == 0:
+                        # if it's the first token we take the logit of class B-
+                        new_logits = token_logits[[0,4,8]]
+                        temp_logits[token_idx] = new_logits
+                    else:
+                        # otherwise we take logit of class M-
+                        new_logits = token_logits[[1,5,9]]
+                        temp_logits[token_idx] = new_logits
+
+            # aggregate over each column to get mean logit
+            api_logit = temp_logits[:, 0].sum() / first_pad_idx
+            user_and_api = temp_logits[:, 1].sum() / first_pad_idx
+            human = temp_logits[:, 2].sum() / first_pad_idx
+
+            aggregate_logits = torch.tensor([[api_logit, user_and_api, human]])
+
+            final_logits[batch_idx] = aggregate_logits
+
+        return final_logits
 
 
     def predict_logits(self, input_data):
@@ -94,9 +142,9 @@ class SeqXGPTWrapper:
                 output = self.model(inputs['features'], inputs['labels'])
                 logits = output['logits']
 
-                total_logits.append(logits.cpu())
+                smaller_logits = self._compress_logits(logits, inputs['labels'])
+                total_logits.append(smaller_logits.cpu())
 
-        #TODO evtl zu (batch_size, config.num_labels) ändern (wie huggingface interface) -> prediction auf sentence level statt token level?
         return torch.cat(total_logits, dim=0)
 
 
