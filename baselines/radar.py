@@ -82,6 +82,10 @@ if __name__ == "__main__":
     from pathlib import Path
     import gc
     from datasets import load_dataset
+    import os
+
+    os.environ["HF_DATASETS_CACHE"] = "/tmp/hf_cache"
+    logging.info("Cache dir:", os.environ.get("HF_DATASETS_CACHE"))
     logging.info("Program started.")
 
     #
