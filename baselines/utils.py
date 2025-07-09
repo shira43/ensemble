@@ -191,8 +191,10 @@ def run_detector_tokenized(detector: DetectorABC, dataset: Dataset, batch_size=3
         labels.extend(batch["label"])  # type: ignore
         predictions.extend(detector.process(batch)["prediction"])  # type: ignore
 
-    logging.info("Starting compute_metrics...")
-    return compute_metrics((np.array(predictions), np.array(labels)))  # type: ignore
+    logging.info("Returning logits....")
+    return predictions
+    # logging.info("Starting compute_metrics...")
+    # return compute_metrics((np.array(predictions), np.array(labels)))  # type: ignore
 
 
 def run_detector(detector: DetectorABC, dataset: Dataset, batch_size=32):
