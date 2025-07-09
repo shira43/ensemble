@@ -10,6 +10,14 @@ from transformers.tokenization_utils_base import BatchEncoding
 from utils import DetectorABC, run_detector
 from datasets import Dataset, DatasetDict, disable_caching
 
+
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,  # or DEBUG, WARNING, ERROR
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
 class Radar(DetectorABC):
     def __init__(self, device="cuda" if torch.cuda.is_available() else "cpu"):
         super().__init__(
@@ -72,25 +80,35 @@ class Radar(DetectorABC):
 if __name__ == "__main__":
 
     from pathlib import Path
-    from datasets import disable_caching, load_dataset
     import gc
 
+    logging.info("Program started.")
+    logging.info("Setting jsonl file path.")
     this_dir = Path(__file__).resolve().parent
     root_dir = this_dir.parent
     jsonl_path = root_dir / "testSeq.jsonl"
 
+    logging.info("Loading dataset.")
     with open(jsonl_path, "r") as f:
         data_list = [json.loads(line) for line in f]
 
     data = Dataset.from_list(data_list)
+
+    logging.info("Dataset loaded as Huggingface Dataset.")
+    # logging.debug("This is a debug message.")  # Only visible if level is DEBUG
+    # logging.info("Program started.")  # Standard messages
+    # logging.warning("This might be an issue.")  # Warnings
+    # logging.error("Something went wrong.")
 
 
     def run_radar():
         results = run_detector(Radar(device="cuda"), data)
         return results
 
-
+    logging.info("Running radar...")
     scores_radar = run_radar()
+    logging.info(f"Running radar is completed.")
+    logging.info(f"Radar score: {scores_radar}")
     gc.collect()
     torch.cuda.synchronize()
     torch.cuda.empty_cache()

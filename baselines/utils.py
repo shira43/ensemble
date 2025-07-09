@@ -10,7 +10,12 @@ import torch
 from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
 from transformers.tokenization_utils_base import BatchEncoding
 
+import logging
 
+logging.basicConfig(
+    level=logging.INFO,  # or DEBUG, WARNING, ERROR
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
 
 warnings.filterwarnings("ignore", message=r".*Please note that with a fast tokenizer.*")
 warnings.filterwarnings(
@@ -26,6 +31,8 @@ warnings.filterwarnings(
 def compute_scores(
     scores: NDArray, threshold: float, labels: NDArray, suffix=""
 ) -> dict[str, float]:
+
+    logging.info("Compute scores...")
     evaluate_f1 = evaluate.load("f1")
     evaluate_acc = evaluate.load("accuracy")
     evaluate_roc_auc = evaluate.load("roc_auc")
@@ -66,6 +73,7 @@ def compute_scores(
                 f"f1_ai{suffix}": float(f1_score_each["f1"]),  # type: ignore
             }
 
+    logging.info("Finished computing scores.")
     return computed_scores
 
 
@@ -113,6 +121,8 @@ def compute_metrics(
     Returns:
         EvaluationMetrics: A dictionary containing calcualted metrics.
     """
+    logging.info("Computing metrics...")
+
     logits, labels = eval_pred  # type: ignore
 
     labels: NDArray = np.array(labels)
@@ -147,6 +157,8 @@ def compute_metrics(
         # TODO?
         pass
 
+    logging.info("Finished computing metrics.")
+
     return metrics
 
 
@@ -178,6 +190,7 @@ def run_detector_tokenized(detector: DetectorABC, dataset: Dataset, batch_size=3
         labels.extend(batch["labels"])  # type: ignore
         predictions.extend(detector.process(batch)["prediction"])  # type: ignore
 
+    logging.info("Starting compute_metrics...")
     return compute_metrics((np.array(predictions), np.array(labels)))  # type: ignore
 
 
@@ -196,6 +209,7 @@ def run_detector(detector: DetectorABC, dataset: Dataset, batch_size=32):
         desc="Tokenizing",
     ).sort("length")
 
+    logging.info("Starting run_detector_tokenized...")
     return run_detector_tokenized(detector, dataset, batch_size=batch_size)
 
 
