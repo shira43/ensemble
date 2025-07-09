@@ -186,7 +186,8 @@ class DetectorABC(ABC):
 def run_detector_tokenized(detector: DetectorABC, dataset: Dataset, batch_size=32):
     labels = []
     predictions = []
-    for batch in dataset.batch(batch_size):
+    for i in range(0, len(dataset), batch_size):
+        batch = dataset[i: i + batch_size]
         labels.extend(batch["labels"])  # type: ignore
         predictions.extend(detector.process(batch)["prediction"])  # type: ignore
 
