@@ -99,8 +99,6 @@ if __name__ == "__main__":
     logging.info("Dataset loaded as Huggingface Dataset.")
 
 
-    data = load_dataset("json", data_files=str(jsonl_path), split="train")
-
     logging.info("Dataset loaded as Huggingface Dataset.")
     # logging.debug("This is a debug message.")  # Only visible if level is DEBUG
     # logging.info("Program started.")  # Standard messages
