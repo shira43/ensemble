@@ -188,7 +188,7 @@ def run_detector_tokenized(detector: DetectorABC, dataset: Dataset, batch_size=3
     predictions = []
     for i in range(0, len(dataset), batch_size):
         batch = dataset[i: i + batch_size]
-        labels.extend(batch["labels"])  # type: ignore
+        labels.extend(batch["label"])  # type: ignore
         predictions.extend(detector.process(batch)["prediction"])  # type: ignore
 
     logging.info("Starting compute_metrics...")
