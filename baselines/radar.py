@@ -78,9 +78,12 @@ class Radar(DetectorABC):
 
 if __name__ == "__main__":
     import os
-    os.environ["HF_DATASETS_CACHE"] = "/hf-cache"
-
     from pathlib import Path
+
+    hf_cache = Path(__file__).parent.resolve() / "hf-cache"
+    os.environ["HF_DATASETS_CACHE"] = str(hf_cache)
+
+
     import gc
     from datasets import load_dataset, disable_caching
 
