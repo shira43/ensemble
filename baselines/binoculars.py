@@ -193,7 +193,7 @@ if __name__ == "__main__":
     jsonl_path = Path(__file__).resolve().parent.parent / "testSeq.jsonl"
 
     logging.info("Loading dataset.")
-    data = load_dataset("json", data_files=str(jsonl_path), split="train")
+    data = load_dataset("json", data_files=str(jsonl_path), split="train", download_mode="force_redownload")
     logging.info("Dataset loaded as Huggingface Dataset.")
 
 
