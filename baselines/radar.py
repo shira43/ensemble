@@ -104,7 +104,6 @@ if __name__ == "__main__":
 
 
     logging.info("Loading dataset.")
-    disable_caching()
     data = load_dataset("json", data_files=str(jsonl_path), split="train")
     logging.info("Dataset loaded as Huggingface Dataset.")
 
