@@ -81,18 +81,25 @@ if __name__ == "__main__":
 
     from pathlib import Path
     import gc
-
+    from datasets import load_dataset
     logging.info("Program started.")
+
+    #
+    # logging.info("Loading dataset.")
+    # with open(jsonl_path, "r") as f:
+    #     data_list = [json.loads(line) for line in f]
+    #
+    # data = Dataset.from_list(data_list)
+
     logging.info("Setting jsonl file path.")
-    this_dir = Path(__file__).resolve().parent
-    root_dir = this_dir.parent
-    jsonl_path = root_dir / "testSeq.jsonl"
+    jsonl_path = Path(__file__).resolve().parent.parent / "testSeq.jsonl"
 
     logging.info("Loading dataset.")
-    with open(jsonl_path, "r") as f:
-        data_list = [json.loads(line) for line in f]
+    data = load_dataset("json", data_files=str(jsonl_path), split="train")
+    logging.info("Dataset loaded as Huggingface Dataset.")
 
-    data = Dataset.from_list(data_list)
+
+    data = load_dataset("json", data_files=str(jsonl_path), split="train")
 
     logging.info("Dataset loaded as Huggingface Dataset.")
     # logging.debug("This is a debug message.")  # Only visible if level is DEBUG
