@@ -8,8 +8,6 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 from utils import DetectorABC, run_detector
 
-
-
 import logging
 
 logging.basicConfig(
@@ -79,40 +77,18 @@ class Radar(DetectorABC):
 if __name__ == "__main__":
     import os
     from pathlib import Path
-    #
-    # hf_cache = Path(__file__).parent.resolve() / "hf-cache"
-    # os.environ["HF_DATASETS_CACHE"] = str(hf_cache)
-
-
     import gc
     from datasets import load_dataset, disable_caching
 
 
-
-    # logging.info(f"Cache dir: {os.environ.get('HF_DATASETS_CACHE')}")
     logging.info("Program started.")
-
-    #
-    # logging.info("Loading dataset.")
-    # with open(jsonl_path, "r") as f:
-    #     data_list = [json.loads(line) for line in f]
-    #
-    # data = Dataset.from_list(data_list)
 
     logging.info("Setting jsonl file path.")
     jsonl_path = Path(__file__).resolve().parent.parent / "testSeq.jsonl"
 
-
     logging.info("Loading dataset.")
     data = load_dataset("json", data_files=str(jsonl_path), split="train")
     logging.info("Dataset loaded as Huggingface Dataset.")
-
-
-    logging.info("Dataset loaded as Huggingface Dataset.")
-    # logging.debug("This is a debug message.")  # Only visible if level is DEBUG
-    # logging.info("Program started.")  # Standard messages
-    # logging.warning("This might be an issue.")  # Warnings
-    # logging.error("Something went wrong.")
 
 
     def run_radar():

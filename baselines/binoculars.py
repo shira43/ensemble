@@ -6,6 +6,13 @@ import gc
 from datasets import Dataset, DatasetDict, disable_caching
 from utils import DetectorABC, run_detector
 
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,  # or DEBUG, WARNING, ERROR
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
 # ___________BINOCULARS___________________
 #_________________________________________
 
@@ -174,17 +181,22 @@ class Binoculars(DetectorABC):
 
 
 if __name__ == "__main__":
-    from datasets import disable_caching, load_dataset
 
-    with open("testSeq.jsonl", "r") as f:
-        data_list = [json.loads(line) for line in f]
+    import os
+    from pathlib import Path
+    import gc
+    from datasets import load_dataset, disable_caching
 
-    data = Dataset.from_list(data_list)
-    # print(transformers.__version__)
-    # data = load_dataset("json", data_files="testSeq.jsonl", split="train")
+    logging.info("Program started.")
 
-    # for example in test_data:
-    #     print(example)
+    logging.info("Setting jsonl file path.")
+    jsonl_path = Path(__file__).resolve().parent.parent / "testSeq.jsonl"
+
+    logging.info("Loading dataset.")
+    data = load_dataset("json", data_files=str(jsonl_path), split="train")
+    logging.info("Dataset loaded as Huggingface Dataset.")
+
+
 
     def run_binoculars():
         disable_caching()
