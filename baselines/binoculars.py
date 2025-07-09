@@ -204,6 +204,9 @@ if __name__ == "__main__":
 
 
     scores_binoculars = run_binoculars()
+
+    logging.info(f"Running binoculars is completed.")
+    logging.info(f"Binoculars score: {scores_binoculars}")
     gc.collect()
     torch.cuda.synchronize()
     torch.cuda.empty_cache()
