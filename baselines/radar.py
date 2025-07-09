@@ -79,9 +79,9 @@ class Radar(DetectorABC):
 if __name__ == "__main__":
     import os
     from pathlib import Path
-
-    hf_cache = Path(__file__).parent.resolve() / "hf-cache"
-    os.environ["HF_DATASETS_CACHE"] = str(hf_cache)
+    #
+    # hf_cache = Path(__file__).parent.resolve() / "hf-cache"
+    # os.environ["HF_DATASETS_CACHE"] = str(hf_cache)
 
 
     import gc
@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
 
 
-    logging.info(f"Cache dir: {os.environ.get('HF_DATASETS_CACHE')}")
+    # logging.info(f"Cache dir: {os.environ.get('HF_DATASETS_CACHE')}")
     logging.info("Program started.")
 
     #
