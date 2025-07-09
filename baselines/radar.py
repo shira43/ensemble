@@ -2,13 +2,12 @@
 # > https://github.com/liamdugan/raid/blob/main/detectors/models/radar/radar.py
 
 import torch
-import json
 import torch.nn.functional as F
 from tqdm import tqdm
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 from utils import DetectorABC, run_detector
-from datasets import Dataset, DatasetDict, disable_caching
+
 
 
 import logging
@@ -78,14 +77,16 @@ class Radar(DetectorABC):
 
 
 if __name__ == "__main__":
+    import os
+    os.environ["HF_DATASETS_CACHE"] = "/tmp/hf_cache"
 
     from pathlib import Path
     import gc
-    from datasets import load_dataset
-    import os
+    from datasets import load_dataset, disable_caching
 
-    os.environ["HF_DATASETS_CACHE"] = "/tmp/hf_cache"
-    logging.info("Cache dir:", os.environ.get("HF_DATASETS_CACHE"))
+
+
+    logging.info(f"Cache dir: {os.environ.get('HF_DATASETS_CACHE')}")
     logging.info("Program started.")
 
     #
