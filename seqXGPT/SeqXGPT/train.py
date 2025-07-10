@@ -215,11 +215,21 @@ class SupervisedTrainer:
 
         for sent, pred in zip(full_sents, pred_sent_labels):
             if pred == 0:
-                pred = 'api'
-            elif pred == 1:
-                pred = 'user_and_api'
-            else:
                 pred = 'user'
+            elif pred == 1:
+                pred = 'api'
+            else:
+                pred = 'user_and_api'
+
+        # This was originally here, but the labels were mixed up.
+
+        # for sent, pred in zip(full_sents, pred_sent_labels):
+        #     if pred == 0:
+        #         pred = 'api'
+        #     elif pred == 1:
+        #         pred = 'user_and_api'
+        #     else:
+        #         pred = 'user'
 
             write_fp.write(sent.strip() + '\t' + pred + '\n')
 
