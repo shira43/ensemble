@@ -139,7 +139,7 @@ def save_test_dataset_data(prediction_data,merged_data_path,dataset):
 def get_init_local_bert_path(bert_init):
     # Create a dictionary that maps the model name to the path of the pre-trained model
     pretrained_model_paths = {
-        "roberta-base": "./pre_trained_model/roberta_base",
+        "roberta-base": "FacebookAI/roberta-base",
         "bert-base-uncased": "//liusanya/liushiqi/projects/ACSA_HGCN/bert_models/bert-base-uncased",
         "distilbert-base-uncased": "./pre_trained_model/distilbert-base-uncased",
         "deberta-v3-base":"./pre_trained_model/deberta-v3-base",
