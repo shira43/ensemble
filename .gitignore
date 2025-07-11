@@ -1,3 +1,5 @@
 /baselines/radar-vicuna-7b/
 /baselines/falcon-7b-instruct/
 /baselines/falcon-7b/
+/bert/data/corpus/we.clean.txt
+/bert/data/we.txt
