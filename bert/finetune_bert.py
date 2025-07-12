@@ -24,7 +24,7 @@ from ignite.metrics import MetricsLambda
 from ignite.metrics import Metric
 from sklearn.metrics import cohen_kappa_score
 from torch.utils.data import DataLoader, Subset, RandomSampler
-from data.coauthor.coathor_to_train_data import reorder_dataframe
+from data.coauthor.coauthor_to_train_data import reorder_dataframe
 import warnings
 
 
