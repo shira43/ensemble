@@ -169,7 +169,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', default='we_test', choices=['20ng', 'R8', 'R52', 'ohsumed', 'mr', "we","we_test"])
     parser.add_argument('--epoch_sample_num', type=int, default=20000)
 
-    parser.add_argument('--bert_init', type=str, default='roberta-base',choices=["roberta-base", "bert-base-uncased", "microsoft/deberta-v3-base","deberta-v3-base","deberta-base"])
+    parser.add_argument('--bert_init', type=str, default='roberta-base',choices=["roberta-base", "bert-base-uncased", "distilbert/distilbert-base-uncased-finetuned-sst-2-english", "microsoft/deberta-v3-base","deberta-v3-base","deberta-base"])
     parser.add_argument('--checkpoint_dir', default=None,
                         help='checkpoint directory, [bert_init]_[dataset] if not specified')
     args = parser.parse_args()
