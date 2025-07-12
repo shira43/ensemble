@@ -38,10 +38,10 @@ def get_selected_data_table_sorted(ds):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # we = writing essay dataset
-    parser.add_argument('--dataset', default='we', choices=["pasted", "coauthor-base", "coauthor-extended", "we"])
+    parser.add_argument('--dataset', default='coauthor_zeng', choices=["pasted", "coauthor-base", "coauthor-extended", "coauthor_zeng"])
     args = parser.parse_args()
     dataset = args.dataset
-    if dataset == "we":
+    if dataset == "coauthor_zeng":
         coauthor_zeng = load_dataset("43shira43/coauthor-zeng")
         sorted_data = get_selected_data_table_sorted(coauthor_zeng)
     elif dataset == "pasted":
@@ -55,7 +55,7 @@ if __name__ == '__main__':
         sorted_data = get_selected_data_table_sorted(coauthor_extended)
     else:
         print("DATASET NOT FOUND")
-        ValueError("Please specify a valid dataset: we, pasted, coauthor-base or coauthor-extended")
+        ValueError("Please specify a valid dataset: coauthor_zeng, pasted, coauthor-base or coauthor-extended")
         sorted_data = None
 
     sorted_data['id_index'] = range(len(sorted_data))
