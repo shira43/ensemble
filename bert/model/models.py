@@ -11,7 +11,8 @@ class BertClassifier(th.nn.Module):
         self.nb_class = nb_class
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
         self.bert_model = AutoModel.from_pretrained(pretrained_model)
-        self.feat_dim = list(self.bert_model.modules())[-2].out_features
+        self.feat_dim = self.bert_model.config.hidden_size
+        # self.feat_dim = list(self.bert_model.modules())[-2].out_features
         self.classifier = th.nn.Linear(self.feat_dim, nb_class)
 
     def forward(self, input_ids, attention_mask):
