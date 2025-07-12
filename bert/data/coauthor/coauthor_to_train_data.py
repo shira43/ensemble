@@ -60,6 +60,8 @@ if __name__ == '__main__':
 
     sorted_data['id_index'] = range(len(sorted_data))
 
+
+    # All files get saved as we (so its easier with build_graph.py. So everytime we.clean.txt and we.txt get overwritten
     with open('../corpus/we.clean.txt'.replace("we", dataset), 'w', encoding='utf-8') as f:
         for sentence in sorted_data['split_sentence_text']:
             f.write(sentence + '\n')
