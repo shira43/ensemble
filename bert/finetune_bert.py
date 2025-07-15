@@ -377,10 +377,10 @@ if __name__ == '__main__':
                     )
                 )
             scheduler.step()
-        else:
-            logger.info('---Old performance {} > New performance {}---'.format(round(log_training_results.best_val_kappa, 4), round(val_kappa, 4)))
-            logger.info('No improvement detected compared to last validation round, early stop is triggered.')
-            exit()
+        # else:
+        #     logger.info('---Old performance {} > New performance {}---'.format(round(log_training_results.best_val_kappa, 4), round(val_kappa, 4)))
+        #     logger.info('No improvement detected compared to last validation round, early stop is triggered.')
+        #     exit()
 
     log_training_results.best_val_kappa = 0
     # For each epoch, RandomSampler will randomly select n samples from the dataset, because we defined the sampler earlier.
