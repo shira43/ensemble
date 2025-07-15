@@ -2,6 +2,7 @@ import pandas as pd
 import torch as th
 from transformers import AutoModel, AutoTokenizer
 import torch.nn.functional as F
+import torch
 from utils import *
 import dgl
 import torch.utils.data as Data
@@ -23,7 +24,7 @@ from ignite.engine import Events
 from ignite.metrics import MetricsLambda
 from ignite.metrics import Metric
 from sklearn.metrics import cohen_kappa_score
-from torch.utils.data import DataLoader, Subset, RandomSampler
+from torch.utils.data import DataLoader, Subset, RandomSampler, WeightedRandomSampler
 from data.coauthor.coauthor_to_train_data import reorder_dataframe
 import warnings
 
@@ -269,11 +270,30 @@ if __name__ == '__main__':
         datasets[split] = Data.TensorDataset(input_ids[split], attention_mask[split], label[split])
         if split in ['test', 'val']:
             loader[split] = Data.DataLoader(datasets[split], batch_size=batch_size, shuffle=False)
+
         else:
-            sampler = RandomSubsetSampler(datasets[split], num_samples=epoch_sample_num)
-            print(f"train dataset sample num: {epoch_sample_num}")
-            loader[split] = DataLoader(datasets[split], batch_size=batch_size, sampler=sampler)
-            # print("sample no")
+            # calculate class weights
+            y_train_np = label['train'].cpu().numpy()  # shape (N_train,)
+            class_counts = np.bincount(y_train_np, minlength=nb_class)
+            class_weights = 1.0 / class_counts  # inverse frequency
+            sample_weights = torch.tensor(class_weights[y_train_np],
+                                          dtype=torch.float)
+
+            #balances whole epoch
+            sampler = WeightedRandomSampler(weights=sample_weights,
+                                            num_samples=epoch_sample_num,
+                                            replacement=True)
+
+            loader[split] = DataLoader(datasets[split],
+                                       batch_size=batch_size,
+                                       sampler=sampler,
+                                       drop_last=True)  # every batch = batch_size
+        # original else statement.
+        # else:
+        #     sampler = RandomSubsetSampler(datasets[split], num_samples=epoch_sample_num)
+        #     print(f"train dataset sample num: {epoch_sample_num}")
+        #     loader[split] = DataLoader(datasets[split], batch_size=batch_size, sampler=sampler)
+        #     # print("sample no")
 
     # define train and test function
 
