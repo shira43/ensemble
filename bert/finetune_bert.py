@@ -167,7 +167,7 @@ if __name__ == '__main__':
     parser.add_argument('--is_save_model', type=str, default='save',choices=['save', 'no_save'], help='input save or no_save')
 
     # we = write essay
-    parser.add_argument('--dataset', default='we_test', choices=['20ng', 'R8', 'R52', 'ohsumed', 'mr', "we","we_test"])
+    parser.add_argument('--dataset', default='we', choices=['20ng', 'R8', 'R52', 'ohsumed', 'mr', "we","we_test"])
     parser.add_argument('--epoch_sample_num', type=int, default=20000)
 
     parser.add_argument('--bert_init', type=str, default='roberta-base',choices=["roberta-base", "bert-base-uncased", "distilbert/distilbert-base-uncased-finetuned-sst-2-english", "microsoft/deberta-v3-base","deberta-v3-base","deberta-base"])
@@ -266,10 +266,14 @@ if __name__ == '__main__':
     datasets = {}
     loader = {}
 
-    for split in ['train', 'val', 'test']:
+    for split in ['train', 'val', 'test', 'train_eval']:
         datasets[split] = Data.TensorDataset(input_ids[split], attention_mask[split], label[split])
-        if split in ['test', 'val']:
-            loader[split] = Data.DataLoader(datasets[split], batch_size=batch_size, shuffle=False)
+        if split in ['test', 'val', 'train_eval']:
+            if split == 'train_eval':
+                loader[split] = DataLoader(datasets["train"], batch_size=batch_size, shuffle=False)
+            else:
+                loader[split] = DataLoader(datasets[split], batch_size=batch_size, shuffle=False)
+
 
         else:
             # calculate class weights
@@ -321,7 +325,7 @@ if __name__ == '__main__':
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(trainer):
         global y_test_pred_results, y_test_true_results, is_save_model
-        evaluator.run(loader['train'])
+        evaluator.run(loader['train_eval'])
         metrics = evaluator.state.metrics
         train_acc, train_nll, train_precision, train_recall, train_f1_score, train_kappa = metrics["acc"], metrics["nll"], metrics[
             "precision"], metrics["recall"], metrics["f1_score"], metrics["kappa"]
