@@ -267,7 +267,7 @@ if __name__ == '__main__':
     loader = {}
 
     for split in ['train', 'val', 'test', 'train_eval']:
-        if split == ['train', 'val', 'test']:
+        if split != 'train_eval':
             datasets[split] = Data.TensorDataset(input_ids[split], attention_mask[split], label[split])
 
         if split in ['test', 'val', 'train_eval']:
