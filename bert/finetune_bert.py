@@ -267,13 +267,14 @@ if __name__ == '__main__':
     loader = {}
 
     for split in ['train', 'val', 'test', 'train_eval']:
-        datasets[split] = Data.TensorDataset(input_ids[split], attention_mask[split], label[split])
+        if split == ['train', 'val', 'test']:
+            datasets[split] = Data.TensorDataset(input_ids[split], attention_mask[split], label[split])
+
         if split in ['test', 'val', 'train_eval']:
             if split == 'train_eval':
                 loader[split] = DataLoader(datasets["train"], batch_size=batch_size, shuffle=False)
             else:
                 loader[split] = DataLoader(datasets[split], batch_size=batch_size, shuffle=False)
-
 
         else:
             # calculate class weights
