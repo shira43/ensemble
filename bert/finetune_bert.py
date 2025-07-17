@@ -10,6 +10,7 @@ from ignite.engine import Events, create_supervised_evaluator, create_supervised
 from ignite.metrics import Accuracy, Loss
 import numpy as np
 import os
+
 from datetime import datetime
 from sklearn.metrics import accuracy_score
 import argparse, shutil, logging
@@ -26,6 +27,7 @@ from ignite.metrics import Metric
 from sklearn.metrics import cohen_kappa_score
 from torch.utils.data import DataLoader, Subset, RandomSampler, WeightedRandomSampler
 from data.coauthor.coauthor_to_train_data import reorder_dataframe
+from sliding_dataset import SlidingWindowDataset
 import warnings
 
 
@@ -62,7 +64,11 @@ def training_step(engine, batch):
     model.train()
     model = model.to(gpu)
     optimizer.zero_grad()
-    (input_ids, attention_mask, label) = [x.to(gpu) for x in batch]
+
+    input_ids      = batch['input_ids'].to(gpu)
+    attention_mask = batch['attention_mask'].to(gpu)
+    label          = batch['label'].to(gpu)
+    #(input_ids, attention_mask, label) = [x.to(gpu) for x in batch]
     optimizer.zero_grad()
     y_pred = model(input_ids, attention_mask)
     y_true = label.type(th.long)
@@ -81,7 +87,11 @@ def evaluation_step(engine, batch):
     with th.no_grad():
         model.eval()
         model = model.to(gpu)
-        (input_ids, attention_mask, label) = [x.to(gpu) for x in batch]
+
+        input_ids = batch['input_ids'].to(gpu)
+        attention_mask = batch['attention_mask'].to(gpu)
+        label = batch['label'].to(gpu)
+        #(input_ids, attention_mask, label) = [x.to(gpu) for x in batch]
         optimizer.zero_grad()
         y_pred = model(input_ids, attention_mask)
         y_true = label
@@ -255,50 +265,114 @@ if __name__ == '__main__':
 
     input_ids_, attention_mask_ = encode_input(text, model.tokenizer)
 
-    # create train/test/val datasets and dataloaders
-    input_ids['train'], input_ids['val'], input_ids['test'] = input_ids_[:nb_train], input_ids_[
-                                                                                     nb_train:nb_train + nb_val], input_ids_[
-                                                                                                                  -nb_test:]
-    attention_mask['train'], attention_mask['val'], attention_mask['test'] = attention_mask_[
-                                                                             :nb_train], attention_mask_[
-                                                                                         nb_train:nb_train + nb_val], attention_mask_[
-                                                                                                                      -nb_test:]
-    datasets = {}
+    # -------------------------------------------------------------------
+    # 1) Build a dataframe with sentence, label, doc_id
+    # -------------------------------------------------------------------
+    docs = []  # doc index for every sentence
+    sents = []  # sentence text
+    labs = []  # label int 0/1/2
+
+    doc_ctr = 0
+    for mask, split_name in [(train_mask, 'train'),
+                             (val_mask, 'val'),
+                             (test_mask, 'test')]:
+        start_idx = 0 if split_name == 'train' else \
+            nb_train if split_name == 'val' else nb_train + nb_val
+        end_idx = start_idx + (mask.sum())
+        # slice sentences & labels for that split
+        for i in range(start_idx, end_idx):
+            docs.append(doc_ctr)
+            sents.append(text[i])
+            labs.append(label[split_name][i - start_idx].item())
+        doc_ctr += 1  # each doc currently = one sentence; adjust if needed
+
+    df_all = pd.DataFrame({'doc_id': docs, 'text': sents, 'label': labs})
+
+    df_train = df_all.iloc[:nb_train]
+    df_val = df_all.iloc[nb_train:nb_train + nb_val]
+    df_test = df_all.iloc[nb_train + nb_val:]
+
+    # -------------------------------------------------------------------
+    # 2) Build SlidingWindowDataset objects
+    # -------------------------------------------------------------------
+    k_window = 2  # neighbours on each side
+    max_len_sw = max_length  # reuse CLI arg
+
+    ds_train = SlidingWindowDataset(df_train, model.tokenizer,
+                                    k=k_window, max_len=max_len_sw)
+    ds_val = SlidingWindowDataset(df_val, model.tokenizer,
+                                  k=k_window, max_len=max_len_sw)
+    ds_test = SlidingWindowDataset(df_test, model.tokenizer,
+                                   k=k_window, max_len=max_len_sw)
+
+    # -------------------------------------------------------------------
+    # 3) Balanced sampler for TRAIN
+    # -------------------------------------------------------------------
+    labels_arr = np.array([ex['label'] for ex in ds_train])
+    class_counts = np.bincount(labels_arr, minlength=nb_class)
+    class_weights = 1.0 / class_counts
+    sample_weights = torch.tensor(class_weights[labels_arr], dtype=torch.float)
+
+    sampler = WeightedRandomSampler(sample_weights,
+                                    num_samples=len(ds_train),  # one balanced epoch
+                                    replacement=True)
+
+    # -------------------------------------------------------------------
+    # 4) Build loaders
+    # -------------------------------------------------------------------
     loader = {}
+    loader['train'] = DataLoader(ds_train, batch_size=batch_size,
+                                 sampler=sampler, drop_last=True)
+    loader['train_eval'] = DataLoader(ds_train, batch_size=batch_size,
+                                      shuffle=False)
+    loader['val'] = DataLoader(ds_val, batch_size=batch_size, shuffle=False)
+    loader['test'] = DataLoader(ds_test, batch_size=batch_size, shuffle=False)
+    # ===================================================================
 
-    for split in ['train', 'val', 'test', 'train_eval']:
-        if split != 'train_eval':
-            datasets[split] = Data.TensorDataset(input_ids[split], attention_mask[split], label[split])
-
-        if split in ['test', 'val', 'train_eval']:
-            if split == 'train_eval':
-                loader[split] = DataLoader(datasets["train"], batch_size=batch_size, shuffle=False)
-            else:
-                loader[split] = DataLoader(datasets[split], batch_size=batch_size, shuffle=False)
-
-        else:
-            # calculate class weights
-            y_train_np = label['train'].cpu().numpy()  # shape (N_train,)
-            class_counts = np.bincount(y_train_np, minlength=nb_class)
-            class_weights = 1.0 / class_counts  # inverse frequency
-            sample_weights = torch.tensor(class_weights[y_train_np],
-                                          dtype=torch.float)
-
-            #balances whole epoch
-            sampler = WeightedRandomSampler(weights=sample_weights,
-                                            num_samples=epoch_sample_num,
-                                            replacement=True)
-
-            loader[split] = DataLoader(datasets[split],
-                                       batch_size=batch_size,
-                                       sampler=sampler,
-                                       drop_last=True)  # every batch = batch_size
-        # original else statement.
-        # else:
-        #     sampler = RandomSubsetSampler(datasets[split], num_samples=epoch_sample_num)
-        #     print(f"train dataset sample num: {epoch_sample_num}")
-        #     loader[split] = DataLoader(datasets[split], batch_size=batch_size, sampler=sampler)
-        #     # print("sample no")
+    # # create train/test/val datasets and dataloaders
+    # input_ids['train'], input_ids['val'], input_ids['test'] = input_ids_[:nb_train], input_ids_[
+    #                                                                                  nb_train:nb_train + nb_val], input_ids_[
+    #                                                                                                               -nb_test:]
+    # attention_mask['train'], attention_mask['val'], attention_mask['test'] = attention_mask_[
+    #                                                                          :nb_train], attention_mask_[
+    #                                                                                      nb_train:nb_train + nb_val], attention_mask_[
+    #                                                                                                                   -nb_test:]
+    # datasets = {}
+    # loader = {}
+    #
+    # for split in ['train', 'val', 'test', 'train_eval']:
+    #     if split != 'train_eval':
+    #         datasets[split] = Data.TensorDataset(input_ids[split], attention_mask[split], label[split])
+    #
+    #     if split in ['test', 'val', 'train_eval']:
+    #         if split == 'train_eval':
+    #             loader[split] = DataLoader(datasets["train"], batch_size=batch_size, shuffle=False)
+    #         else:
+    #             loader[split] = DataLoader(datasets[split], batch_size=batch_size, shuffle=False)
+    #
+    #     else:
+    #         # calculate class weights
+    #         y_train_np = label['train'].cpu().numpy()  # shape (N_train,)
+    #         class_counts = np.bincount(y_train_np, minlength=nb_class)
+    #         class_weights = 1.0 / class_counts  # inverse frequency
+    #         sample_weights = torch.tensor(class_weights[y_train_np],
+    #                                       dtype=torch.float)
+    #
+    #         #balances whole epoch
+    #         sampler = WeightedRandomSampler(weights=sample_weights,
+    #                                         num_samples=epoch_sample_num,
+    #                                         replacement=True)
+    #
+    #         loader[split] = DataLoader(datasets[split],
+    #                                    batch_size=batch_size,
+    #                                    sampler=sampler,
+    #                                    drop_last=True)  # every batch = batch_size
+    #     # original else statement.
+    #     # else:
+    #     #     sampler = RandomSubsetSampler(datasets[split], num_samples=epoch_sample_num)
+    #     #     print(f"train dataset sample num: {epoch_sample_num}")
+    #     #     loader[split] = DataLoader(datasets[split], batch_size=batch_size, sampler=sampler)
+    #     #     # print("sample no")
 
     # define train and test function
 
