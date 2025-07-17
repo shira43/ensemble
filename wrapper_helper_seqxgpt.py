@@ -44,7 +44,6 @@ def gen_features(input_file, output_file):
     output_file: str -> name of output file"""
 
     en_labels = {
-        'prompt': -1,
         'api': 1,
         'user_and_api': 2,
         'human': 0
@@ -108,6 +107,7 @@ def append_document(formatted_data, text, prompt_len, label):
 def dataset_split_to_pandas(hf_dataset):
     """
     Splits huggingface dataset into train and test set and converts to pandas dataframe.
+    we also filter out all columns where label = -1 (prompt)
 
     :param hf_dataset: huggingface dataset
     :return: train, validation, test pandas dataframe
@@ -116,7 +116,10 @@ def dataset_split_to_pandas(hf_dataset):
     train_1 = hf_dataset["train"].to_pandas()
     train_2 = hf_dataset["validation"].to_pandas()
     train_set = pd.concat([train_1, train_2], ignore_index=True)
+    train_set = train_set[train_set["label"] != -1]
+
     test_set = hf_dataset["test"].to_pandas()
+    test_set = test_set[test_set["label"] != -1]
 
     return train_set, test_set
 
@@ -195,7 +198,6 @@ def obtain_jsonl(data_df, output_path):
 
 def label_to_source(example):
     label_map = {
-        -1: "prompt",
         0: "user",
         1: "api",
         2: "user_and_api",
