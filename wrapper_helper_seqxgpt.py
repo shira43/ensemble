@@ -44,6 +44,7 @@ def gen_features(input_file, output_file):
     output_file: str -> name of output file"""
 
     en_labels = {
+        'prompt': -1,
         'api': 1,
         'user_and_api': 2,
         'human': 0
