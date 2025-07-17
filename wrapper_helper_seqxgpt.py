@@ -216,14 +216,14 @@ if __name__ == "__main__":
 
     dataset = args.dataset
 
-    if dataset == "coauthor_zeng":
+    if dataset == "coauthor-zeng":
         coauthor_zeng = load_dataset("43shira43/coauthor-zeng")
         train, test = dataset_split_to_pandas(coauthor_zeng)
         obtain_jsonl(train, "seqXGPT/dataset/coauthor_zeng/train.jsonl")
         obtain_jsonl(test, "seqXGPT/dataset/coauthor_zeng/test.jsonl")
         gen_features("seqXGPT/dataset/coauthor_zeng/train.jsonl", "seqXGPT/dataset/coauthor_zeng/train_features.jsonl")
         gen_features("seqXGPT/dataset/coauthor_zeng/test.jsonl", "seqXGPT/dataset/coauthor_zeng/test_features.jsonl")
-    elif dataset == "pasted":
+    elif dataset == "pasted-base":
         pasted = load_dataset("43shira43/pasted-base")
         pasted = pasted.map(label_to_source)
         pasted.rename_columns({
