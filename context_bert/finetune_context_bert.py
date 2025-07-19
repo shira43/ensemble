@@ -59,7 +59,6 @@ def training_step(engine, batch):
     model.train()
     optimizer.zero_grad()
 
-    # Forward pass – BertForSequenceClassification returns (loss, logits)
     outputs = model(
         input_ids=batch["input_ids"],
         attention_mask=batch["attention_mask"],
