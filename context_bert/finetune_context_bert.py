@@ -2,7 +2,6 @@ import argparse
 from typing import Optional
 
 from ignite.metrics import Loss, Accuracy
-from jieba.lac_small.predict import batch_size
 from sklearn.metrics import cohen_kappa_score
 from transformers import AutoTokenizer, AdamW
 from datasets import load_dataset
