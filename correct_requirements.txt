@@ -253,7 +253,7 @@ scipy==1.8.1
 segtok==1.5.11
 semantic-version==2.10.0
 Send2Trash==1.8.0
-sentencepiece==0.1.99
+sentencepiece==0.1.95
 sentry-sdk==1.6.0
 seqeval==1.2.2
 setproctitle==1.2.3
