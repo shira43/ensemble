@@ -88,7 +88,7 @@ ftfy==6.1.1
 future==0.18.2
 gast==0.4.0
 gdown==3.12.2
-gensim==4.2.0
+gensim==3.8.2
 gitdb==4.0.9
 GitPython==3.1.27
 google-auth==2.8.0
