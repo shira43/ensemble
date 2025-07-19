@@ -109,7 +109,6 @@ hyperopt==0.2.7
 icetk==0.0.4
 idna==3.3
 imagesize==1.4.1
-importlib-metadata
 importlib-resources==5.10.0
 ipykernel==6.16.2
 ipython==7.34.0
