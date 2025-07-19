@@ -1,4 +1,5 @@
 import argparse
+import logging
 from typing import Optional
 
 from ignite.metrics import Loss, Accuracy
@@ -119,7 +120,7 @@ def filter_and_tokenize(data):
     return train_dataset, val_dataset, test_dataset
 
 
-def get_loaders(train_dataset, val_dataset, test_dataset, batch_size=batch_size,
+def get_loaders(train_dataset, val_dataset, test_dataset, batch_size=128,
                 weighted_sampler=True, epoch_sample_num: Optional[int] = None):
     """
         Build   train_loader  (with or without WeightedRandomSampler)
@@ -222,6 +223,14 @@ if __name__ == "__main__":
     cpu = torch.device('cpu')
     gpu = torch.device('cuda:0')
 
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='[%(asctime)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    logger = logging.getLogger(__name__)
+
     args = parse_args()
 
     batch_size = args.batch_size
@@ -239,20 +248,23 @@ if __name__ == "__main__":
     # else:
     #     ckpt_dir = checkpoint_dir
 
+    logger.info("Initializing Tokenizer adn Dataset.")
+
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 
     dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
 
     train, val, test = filter_and_tokenize(dataset)
 
+    logger.info("Loading Dataloaders now...")
     dataloaders = get_loaders(train, val, test, batch_size, use_weighted_sampler, epoch_sample_num)
+    logger.info("Successfully loaded all Dataloaders.")
 
     train_loader = dataloaders["train"]
     val_loader = dataloaders["val"]
     test_loader = dataloaders["test"]
     train_eval_loader = dataloaders["train_eval"]
 
-    print("finished. Loading Dataloader now.")
 
 
     # TODO testen ob evtl für token classification bessere ergebnisse erzielt werden ?
@@ -294,6 +306,8 @@ if __name__ == "__main__":
         m = engine.state.metrics
         print(f"[Train] Epoch {engine.state.epoch:02d} | "
               f"loss={m['loss']:.4f} | acc={m['acc']:.4f}")
+        logger.info(f"[Train] Epoch {engine.state.epoch:02d} | "
+                    f"loss={m['loss']:.4f} | acc={m['acc']:.4f}")
 
 
     @trainer.on(Events.EPOCH_COMPLETED)
@@ -305,11 +319,18 @@ if __name__ == "__main__":
               f"acc={m['acc']:.4f} | "
               f"P={m['precision']:.4f} R={m['recall']:.4f} "
               f"F1={m['f1']:.4f} κ={m['kappa']:.4f}")
+        logger.info(f"[Val]   Epoch {engine.state.epoch:02d} | "
+                    f"loss={m['loss']:.4f} | "
+                    f"acc={m['acc']:.4f} | "
+                    f"P={m['precision']:.4f} R={m['recall']:.4f} "
+                    f"F1={m['f1']:.4f} κ={m['kappa']:.4f}")
 
 
+    logger.info("Starting trainer now...")
     trainer.run(train_loader, max_epochs=nb_epochs)
 
     # ─── after training finishes ───────────────────────────────────────────────────
+    logger.info("Further Model Evaluation after training has finished.")
     model.eval()
     model.bert.config.output_attentions = True  # ask BERT to return attentions
 
@@ -327,8 +348,7 @@ if __name__ == "__main__":
     tokens = tokenizer.convert_ids_to_tokens(sample["input_ids"][0])
     for tok, score, ttype in zip(tokens, cls_attn.cpu().tolist(), sample["token_type_ids"][0].tolist()):
         print(f"{tok:>10}  seg={ttype}  attn={score:.3f}")
-
-
+        logger.info(f"{tok:>10}  seg={ttype}  attn={score:.3f}")
 
     # print("Starting Training loop")
     # trainer = Engine(training_step)
