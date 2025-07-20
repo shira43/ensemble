@@ -130,7 +130,7 @@ def training_step(engine, batch):
         input_ids=batch["input_ids"],
         attention_mask=batch["attention_mask"],
         token_type_ids=batch["token_type_ids"],
-        labels=batch["label"]  # one integer per example
+        labels=batch["labels"]  # one integer per example
     )
 
     logger.info("Outputs of Model received for this batch")
@@ -147,7 +147,7 @@ def training_step(engine, batch):
     return {
         "loss": loss.item(),
         "y_pred": logits.detach(),
-        "y_true": batch["label"].detach()
+        "y_true": batch["labels"].detach()
     }
 
 
@@ -164,7 +164,7 @@ def evaluation_step(engine, batch):
             token_type_ids=batch["token_type_ids"]
         )
 
-        return outputs.logits, batch["label"]
+        return outputs.logits, batch["labels"]
 
 
 
