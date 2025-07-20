@@ -57,6 +57,7 @@ def tokenization(example):
 def training_step(engine, batch):
     global model, optimizer, train_data
     model.train()
+    batch = {k: v.to(gpu) for k, v in batch.items()}  # move batch to gpu
     optimizer.zero_grad()
 
     outputs = model(
@@ -85,6 +86,7 @@ def evaluation_step(engine, batch):
     model.eval()
     with torch.no_grad():
         optimizer.zero_grad()
+        batch = {k: v.to(gpu) for k, v in batch.items()}
 
         outputs = model(
             input_ids=batch["input_ids"],
@@ -99,7 +101,7 @@ def evaluation_step(engine, batch):
 def filter_and_tokenize(data):
     """
 
-    :param data: huggingface dataset with splits "train", "validation", "test", and either a column "sentence_text" or "text"
+    :param data: huggingface dataset with splits "train", "validation", "test", and columns "label" and "sentence_text" or "text"
     :return: three instances of BertContextDataset each for train, validation, test
     """
     # get split and keep only rows with label == 0, 1 or 2
