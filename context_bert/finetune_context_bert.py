@@ -139,6 +139,7 @@ def get_loaders(train_dataset, val_dataset, test_dataset, batch_size=128,
     :return: Returns dict of Dataloaders keyed by split name.
     """
 
+    logger.info("Computing Class weights fromt the train set now...")
     # compute class weights from the train dataset
     train_labels = [example["label"] for example in train_dataset]
     nb_class = int(max(train_labels)) + 1
@@ -146,6 +147,7 @@ def get_loaders(train_dataset, val_dataset, test_dataset, batch_size=128,
     class_weights = 1.0 / counts
     sample_weights = torch.as_tensor(class_weights[train_labels], dtype=torch.float)
 
+    logger.info("Successfully computed class weights. \n Initializing Weighted Sampler...")
     if epoch_sample_num is None:
         epoch_sample_num = len(train_dataset)
 
@@ -159,7 +161,7 @@ def get_loaders(train_dataset, val_dataset, test_dataset, batch_size=128,
     else:
         sampler = None
         shuffle = True
-
+    logger.info("Now building and Saving Dataloaders.")
     loaders = {
         "train": DataLoader(
             train_dataset,
@@ -268,7 +270,7 @@ if __name__ == "__main__":
 
 
     # TODO testen ob evtl für token classification bessere ergebnisse erzielt werden ?
-    #
+    # TODO roberta does not have token_type_ids
     model = BertForSequenceClassification.from_pretrained(
         "bert-base-uncased",
         num_labels=3,
