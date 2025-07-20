@@ -1,7 +1,7 @@
 import argparse
 import logging
 from typing import Optional, Literal
-
+from ignite.contrib.handlers import ProgressBar
 from ignite.metrics import Loss, Accuracy
 from sklearn.metrics import cohen_kappa_score
 from transformers import AutoTokenizer, AdamW
@@ -118,12 +118,10 @@ def build_context_dataset(ds,
 
 
 def training_step(engine, batch):
-    logger.info("Inside training_step (batch)")
     global model, optimizer
     model.train()
-    logger.info("Moving batch to gpu")
     batch = {k: v.to(gpu) for k, v in batch.items()}  # move batch to gpu
-    logger.info("Finished moving batch to gpu")
+
     optimizer.zero_grad()
 
     outputs = model(
@@ -133,17 +131,11 @@ def training_step(engine, batch):
         labels=batch["labels"]  # one integer per example
     )
 
-    logger.info("Outputs of Model received for this batch")
-
     loss = outputs.loss  # already CrossEntropyLoss
     logits = outputs.logits
-    logger.info("Loss and Logits set")
     loss.backward()
-    logger.info("loss.backward() finished")
     optimizer.step()
-    logger.info("Optimizer step finished")
     optimizer.zero_grad()
-    logger.info("Now returning results.")
     return {
         "loss": loss.item(),
         "y_pred": logits.detach(),
@@ -358,6 +350,8 @@ if __name__ == "__main__":
     trainer = Engine(training_step)
     evaluator = Engine(evaluation_step)
 
+    pbar = ProgressBar()
+    pbar.attach(trainer)
 
     # attach metrics
     # trainer: batch-level loss/acc aggregated per epoch
@@ -384,13 +378,13 @@ if __name__ == "__main__":
 
         # Evaluate on all splits
         evaluator.run(train_eval_loader)
-        train_metrics = evaluator.state.metrics
+        train_metrics = dict(evaluator.state.metrics)  # or .copy()
 
         evaluator.run(val_loader)
-        val_metrics = evaluator.state.metrics
+        val_metrics = dict(evaluator.state.metrics)
 
         evaluator.run(test_loader)
-        test_metrics = evaluator.state.metrics
+        test_metrics = dict(evaluator.state.metrics)
 
         logger.info(
             f"[Epoch {trainer.state.epoch}] Train: acc={train_metrics['acc']:.4f} "
