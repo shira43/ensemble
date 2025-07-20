@@ -16,6 +16,9 @@ from transformers import BertForSequenceClassification
 from ignite.engine import Engine, Events
 from BertContextDataset import BertContextDataset
 
+from transformers.utils import logging
+logging.set_verbosity_info()
+
 
 # define cohenkappa
 class CohenKappa(Metric):
@@ -55,9 +58,12 @@ def tokenization(example):
 
 
 def training_step(engine, batch):
-    global model, optimizer, train_data
+    logger.info("Inside training_step (batch)")
+    global model, optimizer
     model.train()
+    logger.info("Moving batch to gpu")
     batch = {k: v.to(gpu) for k, v in batch.items()}  # move batch to gpu
+    logger.info("Finished moving batch to gpu")
     optimizer.zero_grad()
 
     outputs = model(
@@ -66,6 +72,8 @@ def training_step(engine, batch):
         token_type_ids=batch["token_type_ids"],
         labels=batch["label"]  # one integer per example
     )
+
+    logger.info("Outputs of Model received for this batch")
 
     loss = outputs.loss  # already CrossEntropyLoss
     logits = outputs.logits
@@ -306,29 +314,95 @@ if __name__ == "__main__":
 
 
     @trainer.on(Events.EPOCH_COMPLETED)
-    def log_train_metrics(engine):
-        m = engine.state.metrics
-        print(f"[Train] Epoch {engine.state.epoch:02d} | "
-              f"loss={m['loss']:.4f} | acc={m['acc']:.4f}")
-        logger.info(f"[Train] Epoch {engine.state.epoch:02d} | "
-                    f"loss={m['loss']:.4f} | acc={m['acc']:.4f}")
+    def log_training_results(trainer):
+        global y_test_pred_results, y_test_true_results
 
+        # Evaluate on all splits
+        evaluator.run(train_eval_loader)
+        train_metrics = evaluator.state.metrics
 
-    @trainer.on(Events.EPOCH_COMPLETED)
-    def validate(engine):
         evaluator.run(val_loader)
-        m = evaluator.state.metrics
-        print(f"[Val]   Epoch {engine.state.epoch:02d} | "
-              f"loss={m['loss']:.4f} | "
-              f"acc={m['acc']:.4f} | "
-              f"P={m['precision']:.4f} R={m['recall']:.4f} "
-              f"F1={m['f1']:.4f} κ={m['kappa']:.4f}")
-        logger.info(f"[Val]   Epoch {engine.state.epoch:02d} | "
-                    f"loss={m['loss']:.4f} | "
-                    f"acc={m['acc']:.4f} | "
-                    f"P={m['precision']:.4f} R={m['recall']:.4f} "
-                    f"F1={m['f1']:.4f} κ={m['kappa']:.4f}")
+        val_metrics = evaluator.state.metrics
 
+        evaluator.run(test_loader)
+        test_metrics = evaluator.state.metrics
+
+        logger.info(
+            f"[Epoch {trainer.state.epoch}] Train: acc={train_metrics['acc']:.4f} "
+            f"loss={train_metrics['loss']:.4f} prec={train_metrics['precision']:.4f} recall={train_metrics['recall']:.4f} "
+            f"f1={train_metrics['f1']:.4f} kappa={train_metrics['kappa']:.4f}"
+        )
+
+        logger.info(
+            f"[Epoch {trainer.state.epoch}] Val:   acc={val_metrics['acc']:.4f} "
+            f"loss={val_metrics['loss']:.4f} prec={val_metrics['precision']:.4f} recall={val_metrics['recall']:.4f} "
+            f"f1={val_metrics['f1']:.4f} kappa={val_metrics['kappa']:.4f}"
+        )
+
+        logger.info(
+            f"[Epoch {trainer.state.epoch}] Test:  acc={test_metrics['acc']:.4f} "
+            f"loss={test_metrics['loss']:.4f} prec={test_metrics['precision']:.4f} recall={test_metrics['recall']:.4f} "
+            f"f1={test_metrics['f1']:.4f} kappa={test_metrics['kappa']:.4f}"
+        )
+
+        # # Save best checkpoint (tracked via val κappa)
+        # if not hasattr(log_training_results, "best_val_kappa"):
+        #     log_training_results.best_val_kappa = 0
+        #
+        # if val_metrics['kappa'] > log_training_results.best_val_kappa:
+        #     log_training_results.best_val_kappa = val_metrics['kappa']
+        #     logger.info("New best val kappa -> saving checkpoint")
+        #
+        #     # Convert numeric labels to readable labels if you want (optional)
+        #     # lable_list_path = "./data/corpus/we_labels.txt".replace("we", dataset)
+        #     # labels_dic = get_predict_lable_dic(lable_list_path)
+        #     # y_test_pred_results = [labels_dic[p] for p in y_test_pred_results]
+        #     # y_test_true_results = [labels_dic[t] for t in y_test_true_results]
+        #
+        #     prediction_data = pd.DataFrame({
+        #         'label_': y_test_true_results,
+        #         'label_preds': y_test_pred_results
+        #     })
+        #
+        #     # Save test predictions
+        #     os.makedirs(ckpt_dir, exist_ok=True)
+        #     predicted_test_data_path = os.path.join(ckpt_dir, 'predicted_test_data.xlsx')
+        #     prediction_data.to_excel(predicted_test_data_path, index=False)
+        #
+        #     # Save model checkpoint
+        #     if args.is_save_model == "save":
+        #         th.save({
+        #             'bert_model': model.bert.state_dict(),
+        #             'classifier': model.classifier.state_dict(),
+        #             'optimizer': optimizer.state_dict(),
+        #             'epoch': trainer.state.epoch,
+        #         }, os.path.join(ckpt_dir, 'checkpoint.pth'))
+
+
+    # @trainer.on(Events.EPOCH_COMPLETED)
+    # def log_train_metrics(engine):
+    #     m = engine.state.metrics
+    #     print(f"[Train] Epoch {engine.state.epoch:02d} | "
+    #           f"loss={m['loss']:.4f} | acc={m['acc']:.4f}")
+    #     logger.info(f"[Train] Epoch {engine.state.epoch:02d} | "
+    #                 f"loss={m['loss']:.4f} | acc={m['acc']:.4f}")
+    #
+    #
+    # @trainer.on(Events.EPOCH_COMPLETED)
+    # def validate(engine):
+    #     evaluator.run(val_loader)
+    #     m = evaluator.state.metrics
+    #     print(f"[Val]   Epoch {engine.state.epoch:02d} | "
+    #           f"loss={m['loss']:.4f} | "
+    #           f"acc={m['acc']:.4f} | "
+    #           f"P={m['precision']:.4f} R={m['recall']:.4f} "
+    #           f"F1={m['f1']:.4f} κ={m['kappa']:.4f}")
+    #     logger.info(f"[Val]   Epoch {engine.state.epoch:02d} | "
+    #                 f"loss={m['loss']:.4f} | "
+    #                 f"acc={m['acc']:.4f} | "
+    #                 f"P={m['precision']:.4f} R={m['recall']:.4f} "
+    #                 f"F1={m['f1']:.4f} κ={m['kappa']:.4f}")
+    #
 
     logger.info("Starting trainer now...")
     trainer.run(train_loader, max_epochs=nb_epochs)
