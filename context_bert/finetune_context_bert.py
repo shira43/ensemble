@@ -1,11 +1,11 @@
 import argparse
 import logging
-from typing import Optional
+from typing import Optional, Literal
 
 from ignite.metrics import Loss, Accuracy
 from sklearn.metrics import cohen_kappa_score
 from transformers import AutoTokenizer, AdamW
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 import torch
 from torch.nn.functional import cross_entropy
@@ -52,7 +52,69 @@ def collate_fn(batch):
 
 def tokenization(example):
     text_col = 'sentence_text' if 'sentence_text' in example else 'text'
-    return tokenizer(example[text_col], add_special_tokens=False)
+    return {"tokens": tokenizer(example[text_col],
+                                add_special_tokens=False)["input_ids"]}
+
+
+def get_max_context_sample(tokenized_sentences: list[list[int]],
+                           sentence_idx: int,
+                           max_length: int = 512,
+                           max_context_sentences: Optional[int] = None,
+                           context_type: Literal["prefix", "suffix"] = "prefix",
+                           ) -> tuple[list[int], list[int]]:
+    """Get the maximum context sample from a list of sentences.
+
+    Args:
+        tokenized_sentences: A list of input_ids of the sentences
+        sentence_idx: The index of the sentence to get the context from.
+        max_length: The maximum length of the context.
+        max_context_sentences: Maximum number of context sentences to return.
+        context_type: The type of context to get.
+
+    Returns:
+        The maximum context sample and the offset.
+    """
+
+    text = tokenized_sentences[sentence_idx]
+    context = (
+        # reverse the order of the prefix context
+        tokenized_sentences[:sentence_idx][::-1]
+        if context_type == "prefix"
+        else tokenized_sentences[sentence_idx + 1:]
+    )
+
+    buffer = []
+    for sentence in context[:max_context_sentences]:
+        if len(buffer) + len(sentence) >= max_length:
+            break
+
+        if context_type == "suffix":
+            buffer.extend(sentence)
+        else:
+            buffer = sentence + buffer
+
+    return (text, buffer) if context_type == "suffix" else (buffer, text)
+
+
+def build_context_dataset(ds,
+                          max_context_sentences=2,
+                          context_type: Literal["prefix", "suffix"] = "prefix"):
+    tokens_list = ds["tokens"]
+    labels      = ds["label"]
+    rows = []
+    for idx in range(len(ds)):
+        ctx, tgt = get_max_context_sample(
+            tokens_list,
+            sentence_idx=idx,
+            max_length=tokenizer.model_max_length,
+            max_context_sentences=max_context_sentences,
+            context_type=context_type,
+        )
+        feats = tokenizer.prepare_for_model(ctx, tgt, add_special_tokens=True)
+        feats["labels"] = labels[idx]   # for HF we need "labels"
+        rows.append(feats)
+    return Dataset.from_list(rows)
+
 
 
 def training_step(engine, batch):
@@ -121,11 +183,14 @@ def filter_and_tokenize(data):
     val_set = val_set.map(tokenization, batched=True)
     test_set = test_set.map(tokenization, batched=True)
 
-    train_dataset = BertContextDataset(train_set, tokenizer)
-    val_dataset = BertContextDataset(val_set, tokenizer)
-    test_dataset = BertContextDataset(test_set, tokenizer)
+    train_dataset = build_context_dataset(train_set, 2, "prefix")
+    val_dataset = build_context_dataset(val_set, 2, "prefix")
+    test_dataset = build_context_dataset(test_set, 2, "prefix")
 
-    print("Filtering and tokenization of dataset completed.")
+    # turn to torch tensors for dataloader
+    cols = ["input_ids", "token_type_ids", "attention_mask", "labels"]
+    for ds in (train_dataset, val_dataset, test_dataset):
+        ds.set_format(type="torch", columns=cols)
 
     return train_dataset, val_dataset, test_dataset
 
@@ -151,7 +216,7 @@ def get_loaders(train_dataset, val_dataset, test_dataset, batch_size=128,
 
     logger.info("Computing Class weights from the train set now...")
     # compute class weights from the train dataset
-    train_labels = train_dataset.get_all_labels()
+    train_labels = train_dataset["labels"].tolist()
     nb_class = int(max(train_labels)) + 1
     counts = np.bincount(train_labels, minlength=nb_class)
     class_weights = 1.0 / counts
