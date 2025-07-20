@@ -200,7 +200,7 @@ if __name__ == "__main__":
     train, val, test = filter_and_tokenize(dataset, max_context)
 
     logger.info("Loading Dataloaders now...")
-    dataloaders = get_loaders(train, val, test, batch_size, use_weighted_sampler, epoch_sample_num, collate_fn())
+    dataloaders = get_loaders(train, val, test, batch_size, use_weighted_sampler, epoch_sample_num, collate_fn)
     logger.info("Successfully loaded all Dataloaders.")
 
     train_loader = dataloaders["train"]
