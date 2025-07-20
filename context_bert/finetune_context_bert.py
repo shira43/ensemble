@@ -167,7 +167,7 @@ if __name__ == "__main__":
     )
     logger = logging.getLogger(__name__)
 
-    collate_fn = get_collate_fn()
+
 
     args = parse_args()
 
@@ -190,6 +190,8 @@ if __name__ == "__main__":
     logger.info("Initializing Tokenizer adn Dataset.")
 
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+
+    collate_fn = get_collate_fn(tokenizer)
 
     dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
 

@@ -147,7 +147,7 @@ def parse_args():
     parser.add_argument('--dataset', default='coauthor-zeng',
                         choices=["pasted-base", "coauthor-base", "coauthor-extended-base", "coauthor-zeng"])
     parser.add_argument('--epoch_sample_num', type=int, default=None)
-    parser.add_argument('--max_context_sentences', type=int, default=2)
+
 
     parser.add_argument('--bert_init', type=str, default='bert-base-uncased', choices=["roberta-base", "bert-base-uncased",
                                                                                   "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
@@ -155,6 +155,9 @@ def parse_args():
                                                                                   "deberta-v3-base", "deberta-base"])
     parser.add_argument('--checkpoint_dir', default=None,
                         help='checkpoint directory, [bert_init]_[dataset] if not specified')
+
+    # only for finetune_context_bert
+    parser.add_argument('--max_context_sentences', type=int, default=2)
 
     return parser.parse_args()
 
