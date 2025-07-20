@@ -8,9 +8,12 @@ class BertContextDataset(Dataset):
         self.tokenizer = tokenizer
         self.max_context_sentences = max_context_sentences
         self.context_type = context_type
+        self.labels = self.data["label"]
+
 
     def __len__(self):
         return len(self.data["input_ids"])
+
 
     def __getitem__(self, idx):
         a, b = self.get_max_context_sample(
@@ -26,6 +29,10 @@ class BertContextDataset(Dataset):
         encoding["label"] = self.data["label"][idx]
 
         return encoding
+
+
+    def get_all_labels(self):
+        return self.labels
 
 
     @staticmethod

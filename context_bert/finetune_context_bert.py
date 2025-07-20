@@ -141,7 +141,7 @@ def get_loaders(train_dataset, val_dataset, test_dataset, batch_size=128,
 
     logger.info("Computing Class weights from the train set now...")
     # compute class weights from the train dataset
-    train_labels = train_dataset["label"]
+    train_labels = train_dataset.get_all_labels()
     nb_class = int(max(train_labels)) + 1
     counts = np.bincount(train_labels, minlength=nb_class)
     class_weights = 1.0 / counts
