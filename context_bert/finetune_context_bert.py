@@ -139,9 +139,9 @@ def get_loaders(train_dataset, val_dataset, test_dataset, batch_size=128,
     :return: Returns dict of Dataloaders keyed by split name.
     """
 
-    logger.info("Computing Class weights fromt the train set now...")
+    logger.info("Computing Class weights from the train set now...")
     # compute class weights from the train dataset
-    train_labels = [example["label"] for example in train_dataset]
+    train_labels = train_dataset["label"]
     nb_class = int(max(train_labels)) + 1
     counts = np.bincount(train_labels, minlength=nb_class)
     class_weights = 1.0 / counts
