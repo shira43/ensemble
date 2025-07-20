@@ -16,8 +16,6 @@ from transformers import BertForSequenceClassification
 from ignite.engine import Engine, Events
 from BertContextDataset import BertContextDataset
 
-from transformers.utils import logging
-logging.set_verbosity_info()
 
 
 # define cohenkappa
