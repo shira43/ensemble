@@ -49,10 +49,10 @@ class CohenKappa(Metric):
         return cohen_kappa_score(self._targets, self._predictions)
 
 
-def get_collate_fn(tokenizer):
-    def collate_fn(batch):
-        return tokenizer.pad(batch, return_tensors="pt")
-    return collate_fn
+# def get_collate_fn(tokenizer):
+#     def collate_fn(batch):
+#         return tokenizer.pad(batch, return_tensors="pt")
+#     return collate_fn
 
 
 

@@ -14,7 +14,11 @@ from transformers import TrainingArguments, Trainer, DataCollatorWithPadding
 import evaluate, numpy as np
 from transformers import BertForSequenceClassification
 from ignite.engine import Engine, Events
-from helpers import get_loaders, parse_args, CohenKappa, get_collate_fn
+from helpers import get_loaders, parse_args, CohenKappa
+
+
+def collate_fn(batch):
+    return tokenizer.pad(batch, return_tensors="pt")
 
 
 def tokenization(example):
@@ -191,14 +195,12 @@ if __name__ == "__main__":
 
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 
-    collate_fn = get_collate_fn(tokenizer)
-
     dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
 
     train, val, test = filter_and_tokenize(dataset, max_context)
 
     logger.info("Loading Dataloaders now...")
-    dataloaders = get_loaders(train, val, test, batch_size, use_weighted_sampler, epoch_sample_num)
+    dataloaders = get_loaders(train, val, test, batch_size, use_weighted_sampler, epoch_sample_num, collate_fn())
     logger.info("Successfully loaded all Dataloaders.")
 
     train_loader = dataloaders["train"]
