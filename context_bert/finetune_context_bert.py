@@ -120,7 +120,7 @@ def filter_and_tokenize(data, max_context_sentences=2):
 
 if __name__ == "__main__":
     cpu = torch.device('cpu')
-    gpu = torch.device('cuda:0')
+    gpu = torch.device('cuda:1')
 
     # Configure logging
     logging.basicConfig(
