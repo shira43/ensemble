@@ -4,6 +4,7 @@ from typing import Optional, Literal
 from ignite.contrib.handlers import ProgressBar
 from ignite.metrics import Loss, Accuracy
 from sklearn.metrics import cohen_kappa_score
+from functools import partial
 from transformers import AutoTokenizer, AdamW
 from datasets import load_dataset, Dataset
 from torch.utils.data import DataLoader, WeightedRandomSampler
@@ -179,8 +180,8 @@ if __name__ == "__main__":
 
     optimizer = AdamW(model.parameters(), lr=bert_lr)
 
-    trainer = Engine(training_step)
-    evaluator = Engine(evaluation_step)
+    trainer = Engine(partial(training_step, model=model, optimizer=optimizer))
+    evaluator = Engine(partial(evaluation_step, model=model))
 
     pbar = ProgressBar()
     pbar.attach(trainer)

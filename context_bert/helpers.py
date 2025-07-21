@@ -137,8 +137,8 @@ def get_loaders(train_dataset, val_dataset, test_dataset, batch_size=128,
     return loaders
 
 
-def training_step(engine, batch):
-    global model, optimizer
+def training_step(engine, batch, model, optimizer):
+
     model.train()
     batch = {k: v.to(gpu) for k, v in batch.items()}  # move batch to gpu
 
@@ -163,11 +163,9 @@ def training_step(engine, batch):
     }
 
 
-def evaluation_step(engine, batch):
-    global model
+def evaluation_step(engine, batch, model):
     model.eval()
     with torch.no_grad():
-        optimizer.zero_grad()
         batch = {k: v.to(gpu) for k, v in batch.items()}
 
         outputs = model(
