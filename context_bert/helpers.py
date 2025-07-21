@@ -24,7 +24,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 cpu = torch.device('cpu')
-gpu = torch.device('cuda:0')
+gpu = torch.device('cuda:1')
 
 # define cohenkappa
 class CohenKappa(Metric):
