@@ -14,7 +14,7 @@ from transformers import TrainingArguments, Trainer, DataCollatorWithPadding
 import evaluate, numpy as np
 from transformers import BertForSequenceClassification
 from ignite.engine import Engine, Events
-from helpers import get_loaders, parse_args, CohenKappa
+from helpers import get_loaders, parse_args, CohenKappa, training_step, evaluation_step
 
 
 def collate_fn(batch):
@@ -44,7 +44,7 @@ def get_max_context_sample(tokenized_sentences: list[list[int]],
         context_type: The type of context to get.
 
     Returns:
-        The maximum context sample and the offset.
+        The maximum context sample and the offset. text and buffer are lists with input_ids of the sentence
     """
 
     text = tokenized_sentences[sentence_idx]
@@ -83,7 +83,7 @@ def build_context_dataset(ds,
             context_type=context_type,
         )
         feats = tokenizer.prepare_for_model(ctx, tgt, add_special_tokens=True)
-        feats["labels"] = labels[idx]   # for HF we need "labels"
+        feats["labels"] = labels[idx]
         rows.append(feats)
     return Dataset.from_list(rows)
 
@@ -93,7 +93,7 @@ def filter_and_tokenize(data, max_context_sentences=2):
 
     :param data: huggingface dataset with splits "train", "validation", "test", and columns "label" and "sentence_text" or "text"
     :param max_context_sentences: Maximum number of context sentences to return.
-    :return: three instances of BertContextDataset each for train, validation, test
+    :return: three instances datasets.Dataset with pytorch tensors as values to keys
     """
     # get split and keep only rows with label == 0, 1 or 2
     train_set = data["train"].filter(lambda example: example["label"] in [0, 1, 2])
@@ -114,48 +114,6 @@ def filter_and_tokenize(data, max_context_sentences=2):
         ds.set_format(type="torch", columns=cols)
 
     return train_dataset, val_dataset, test_dataset
-
-
-def training_step(engine, batch):
-    global model, optimizer
-    model.train()
-    batch = {k: v.to(gpu) for k, v in batch.items()}  # move batch to gpu
-
-    optimizer.zero_grad()
-
-    outputs = model(
-        input_ids=batch["input_ids"],
-        attention_mask=batch["attention_mask"],
-        token_type_ids=batch["token_type_ids"],
-        labels=batch["labels"]  # one integer per example
-    )
-
-    loss = outputs.loss  # already CrossEntropyLoss
-    logits = outputs.logits
-    loss.backward()
-    optimizer.step()
-    optimizer.zero_grad()
-    return {
-        "loss": loss.item(),
-        "y_pred": logits.detach(),
-        "y_true": batch["labels"].detach()
-    }
-
-
-def evaluation_step(engine, batch):
-    global model
-    model.eval()
-    with torch.no_grad():
-        optimizer.zero_grad()
-        batch = {k: v.to(gpu) for k, v in batch.items()}
-
-        outputs = model(
-            input_ids=batch["input_ids"],
-            attention_mask=batch["attention_mask"],
-            token_type_ids=batch["token_type_ids"]
-        )
-
-        return outputs.logits, batch["labels"]
 
 
 
@@ -193,7 +151,7 @@ if __name__ == "__main__":
 
     logger.info("Initializing Tokenizer adn Dataset.")
 
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+    tokenizer = AutoTokenizer.from_pretrained(bert_init)
 
     dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
 

@@ -23,6 +23,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+cpu = torch.device('cpu')
+gpu = torch.device('cuda:0')
 
 # define cohenkappa
 class CohenKappa(Metric):
@@ -78,7 +80,7 @@ def get_loaders(train_dataset, val_dataset, test_dataset, batch_size=128,
 
     logger.info("Computing Class weights from the train set now...")
     # compute class weights from the train dataset
-    train_labels = train_dataset["labels"].tolist()
+    train_labels = np.array(train_dataset["labels"])
     nb_class = int(max(train_labels)) + 1
     counts = np.bincount(train_labels, minlength=nb_class)
     class_weights = 1.0 / counts
@@ -135,11 +137,53 @@ def get_loaders(train_dataset, val_dataset, test_dataset, batch_size=128,
     return loaders
 
 
+def training_step(engine, batch):
+    global model, optimizer
+    model.train()
+    batch = {k: v.to(gpu) for k, v in batch.items()}  # move batch to gpu
+
+    optimizer.zero_grad()
+
+    outputs = model(
+        input_ids=batch["input_ids"],
+        attention_mask=batch["attention_mask"],
+        token_type_ids=batch["token_type_ids"],
+        labels=batch["labels"]  # one integer per example
+    )
+
+    loss = outputs.loss  # already CrossEntropyLoss
+    logits = outputs.logits
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+    return {
+        "loss": loss.item(),
+        "y_pred": logits.detach(),
+        "y_true": batch["labels"].detach()
+    }
+
+
+def evaluation_step(engine, batch):
+    global model
+    model.eval()
+    with torch.no_grad():
+        optimizer.zero_grad()
+        batch = {k: v.to(gpu) for k, v in batch.items()}
+
+        outputs = model(
+            input_ids=batch["input_ids"],
+            attention_mask=batch["attention_mask"],
+            token_type_ids=batch["token_type_ids"]
+        )
+
+        return outputs.logits, batch["labels"]
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
-    # parser.add_argument('--max_length', type=int, default=512, help='the input length for bert')
+
     parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--use_weighted_sampler', type=bool, default=True)
+    parser.add_argument('--use_weighted_sampler', type=bool, default=False)
     parser.add_argument('--nb_epochs', type=int, default=7)
     parser.add_argument('--bert_lr', type=float, default=1e-4)
     parser.add_argument('--is_save_model', type=str, default='save', choices=['save', 'no_save'],
@@ -158,6 +202,9 @@ def parse_args():
 
     # only for finetune_context_bert
     parser.add_argument('--max_context_sentences', type=int, default=2)
+
+    #only for finetune_sequence_bert
+    parser.add_argument('--max_length', type=int, default=512, help='the max input length for bert')
 
     return parser.parse_args()
 
