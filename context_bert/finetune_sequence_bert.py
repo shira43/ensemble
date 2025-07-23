@@ -1,4 +1,6 @@
 import logging
+from functools import partial
+
 from ignite.contrib.handlers import ProgressBar
 from ignite.metrics import Loss, Accuracy
 from transformers import AutoTokenizer, AdamW, BertForTokenClassification, DataCollatorForTokenClassification
@@ -174,8 +176,11 @@ if __name__ == "__main__":
 
     optimizer = AdamW(model.parameters(), lr=bert_lr)
 
-    trainer = Engine(training_step)
-    evaluator = Engine(evaluation_step)
+    trainer = Engine(partial(training_step, model=model, optimizer=optimizer))
+    evaluator = Engine(partial(evaluation_step, model=model))
+
+    # trainer = Engine(training_step)
+    # evaluator = Engine(evaluation_step)
 
     pbar = ProgressBar()
     pbar.attach(trainer)
