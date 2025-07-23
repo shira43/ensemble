@@ -235,3 +235,7 @@ if __name__ == "__main__":
             f"loss={test_metrics['loss']:.4f} prec={test_metrics['precision']:.4f} recall={test_metrics['recall']:.4f} "
             f"f1={test_metrics['f1']:.4f} kappa={test_metrics['kappa']:.4f}"
         )
+
+
+    logger.info("Starting trainer now...")
+    trainer.run(train_loader, max_epochs=nb_epochs)
