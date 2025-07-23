@@ -78,19 +78,22 @@ def get_loaders(train_dataset, val_dataset, test_dataset, batch_size=128,
     :return: Returns dict of Dataloaders keyed by split name.
     """
 
-    logger.info("Computing Class weights from the train set now...")
-    # compute class weights from the train dataset
-    train_labels = np.array(train_dataset["labels"])
-    nb_class = int(max(train_labels)) + 1
-    counts = np.bincount(train_labels, minlength=nb_class)
-    class_weights = 1.0 / counts
-    sample_weights = torch.as_tensor(class_weights[train_labels], dtype=torch.float)
 
-    logger.info("Successfully computed class weights. \n Initializing Weighted Sampler...")
     if epoch_sample_num is None:
         epoch_sample_num = len(train_dataset)
 
     if weighted_sampler:
+        logger.info("Computing Class weights from the train set now...")
+        # compute class weights from the train dataset
+        train_labels = np.array(train_dataset["labels"])
+        nb_class = int(max(train_labels)) + 1
+        counts = np.bincount(train_labels, minlength=nb_class)
+        class_weights = 1.0 / counts
+        sample_weights = torch.as_tensor(class_weights[train_labels], dtype=torch.float)
+
+        logger.info("Successfully computed class weights. \n Initializing Weighted Sampler...")
+
+
         sampler = WeightedRandomSampler(
             weights=sample_weights,
             num_samples=epoch_sample_num,
