@@ -213,7 +213,7 @@ if __name__ == "__main__":
     dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
 
     train, val, test = filter_and_tokenize(dataset, max_length)
-    logger.info(train)
+    logger.info(len(train))
     dataloaders = get_loaders(train, val, test, batch_size, use_weighted_sampler, epoch_sample_num, data_collator)
     logger.info("Successfully loaded all Dataloaders.")
 
