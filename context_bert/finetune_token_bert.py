@@ -269,7 +269,7 @@ if __name__ == "__main__":
         "precision": Precision(output_transform=multi_cls_transform, average=True, device=gpu),
         "recall": Recall(output_transform=multi_cls_transform, average=True, device=gpu),
         "f1": Fbeta(beta=1.0, output_transform=multi_cls_transform, average=True, device=gpu),
-        "kappa": CohenKappa(output_transform=cls_metric_transform)  # still fine with 1-D preds
+        "kappa": CohenKappa(output_transform=multi_cls_transform)
     }
 
     for name, metric in metrics.items():
