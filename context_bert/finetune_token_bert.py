@@ -228,8 +228,8 @@ if __name__ == "__main__":
 
     # # attach metrics
     # # trainer: batch-level loss/acc aggregated per epoch
-    #Loss(cross_entropy, output_transform=lambda o: (o["y_pred"], o["y_true"])).attach(trainer, "loss")
-    #Accuracy(output_transform=lambda o: (o["y_pred"], o["y_true"])).attach(trainer, "acc")
+    Loss(cross_entropy, output_transform=lambda o: (o["y_pred"], o["y_true"])).attach(trainer, "loss")
+    Accuracy(output_transform=lambda o: (o["y_pred"], o["y_true"])).attach(trainer, "acc")
 
 
     # evaluator: full-epoch metrics on val_loader and train_loader
@@ -247,7 +247,7 @@ if __name__ == "__main__":
 
     metrics = {
         "loss": Loss(cross_entropy),
-        "acc": Accuracy(output_transform=acc_transform, device=gpu),
+        #"acc": Accuracy(output_transform=acc_transform, device=gpu),
         "precision": Precision(output_transform=cls_metric_transform, average=True, device=gpu),
         "recall": Recall(output_transform=cls_metric_transform, average=True, device=gpu),
         "f1": Fbeta(beta=1.0, output_transform=cls_metric_transform, average=True, device=gpu),
