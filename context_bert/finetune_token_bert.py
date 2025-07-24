@@ -123,6 +123,22 @@ def filter_and_tokenize(data, max_seq_length=512):
     return train_dataset, val_dataset, test_dataset
 
 
+def cls_metric_transform(output):
+    """
+    output = (logits, labels)  with
+        logits : (B, C, S)  after _prepare_logits / permute
+        labels : (B, S)
+    returns   = (pred_flat, gold_flat)  with only valid positions kept
+    """
+    y_pred, y = output
+    y_pred = torch.argmax(y_pred, dim=1)       # (B, S)
+
+    # keep tokens whose gold label is within range
+    mask = (y >= 0) & (y < len(id2label))
+    y_pred = y_pred[mask]
+    y      = y[mask]
+    return y_pred, y
+
 
 if __name__ == "__main__":
     cpu = torch.device('cpu')
@@ -198,15 +214,26 @@ if __name__ == "__main__":
     Accuracy(output_transform=lambda o: (o["y_pred"], o["y_true"])).attach(trainer, "acc")
 
     # evaluator: full-epoch metrics on val_loader and train_loader
+    # metrics = {
+    #     "loss": Loss(cross_entropy),
+    #     "acc": Accuracy(),
+    #     "precision": Precision(average=True),  # micro-avg over classes
+    #     "recall": Recall(average=True),
+    #     "f1": Fbeta(beta=1.0, average=True),
+    #     "kappa": CohenKappa()
+    # }
+    #
+    # for name, metric in metrics.items():
+    #     metric.attach(evaluator, name)
+
     metrics = {
         "loss": Loss(cross_entropy),
-        "acc": Accuracy(),
-        "precision": Precision(average=True),  # micro-avg over classes
-        "recall": Recall(average=True),
-        "f1": Fbeta(beta=1.0, average=True),
-        "kappa": CohenKappa()
+        "acc": Accuracy(output_transform=cls_metric_transform, device=gpu),
+        "precision": Precision(output_transform=cls_metric_transform, average=True, device=gpu),
+        "recall": Recall(output_transform=cls_metric_transform, average=True, device=gpu),
+        "f1": Fbeta(beta=1.0, output_transform=cls_metric_transform, average=True, device=gpu),
+        "kappa": CohenKappa(output_transform=cls_metric_transform)  # CohenKappa moves to CPU/Numpy itself
     }
-
     for name, metric in metrics.items():
         metric.attach(evaluator, name)
 
