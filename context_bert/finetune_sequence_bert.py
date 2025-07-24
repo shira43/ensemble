@@ -171,7 +171,13 @@ if __name__ == "__main__":
     train_eval_loader = dataloaders["train_eval"]
 
 
-    model = BertForTokenClassification.from_pretrained(bert_init)
+    model = BertForTokenClassification.from_pretrained(
+        bert_init,
+        num_labels=5,
+        id2label=id2label,
+        label2id={v: k for k, v in id2label.items()}
+    )
+
     model = model.to(gpu)
 
     optimizer = AdamW(model.parameters(), lr=bert_lr)
