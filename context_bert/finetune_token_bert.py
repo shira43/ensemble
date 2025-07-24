@@ -123,6 +123,24 @@ def filter_and_tokenize(data, max_seq_length=512):
     return train_dataset, val_dataset, test_dataset
 
 
+def multi_cls_transform(output):
+    """
+    Make metrics happy for a 5-class token task.
+    Returns
+        y_pred : (N_valid, C)  logits/probabilities
+        y_true : (N_valid,)    integer class ids
+    """
+    logits, y = output                 # logits : (B, C, S)
+    B, C, S   = logits.shape           # C == num_labels
+    y_flat    = y.view(-1)             # (B·S)
+    mask      = (y_flat >= 0) & (y_flat < C)
+
+    # (B, C, S) -> (B·S, C)
+    logits_flat = logits.permute(0, 2, 1).reshape(-1, C)
+
+    return logits_flat[mask], y_flat[mask]
+
+
 def cls_metric_transform(output):
     """
     output = (logits, labels)  with
@@ -246,13 +264,14 @@ if __name__ == "__main__":
     #     metric.attach(evaluator, name)
 
     metrics = {
-        "loss": Loss(cross_entropy),
-        #"acc": Accuracy(output_transform=acc_transform, device=gpu),
-        #"precision": Precision(output_transform=cls_metric_transform, average=True, device=gpu),
-        "recall": Recall(output_transform=cls_metric_transform, average=True, device=gpu),
-        "f1": Fbeta(beta=1.0, output_transform=cls_metric_transform, average=True, device=gpu),
-        "kappa": CohenKappa(output_transform=cls_metric_transform)  # CohenKappa moves to CPU/Numpy itself
+        "loss": Loss(cross_entropy, device=gpu),  # sees logits + -100 labels
+        "acc": Accuracy(output_transform=multi_cls_transform, device=gpu),
+        "precision": Precision(output_transform=multi_cls_transform, average=True, device=gpu),
+        "recall": Recall(output_transform=multi_cls_transform, average=True, device=gpu),
+        "f1": Fbeta(beta=1.0, output_transform=multi_cls_transform, average=True, device=gpu),
+        "kappa": CohenKappa(output_transform=cls_metric_transform)  # still fine with 1-D preds
     }
+
     for name, metric in metrics.items():
         metric.attach(evaluator, name)
 
