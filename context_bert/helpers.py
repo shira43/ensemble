@@ -155,13 +155,13 @@ def training_step(engine, batch, model, optimizer):
     )
 
     loss = outputs.loss  # already CrossEntropyLoss
-    logits = outputs.logits
+    logits = outputs.logits.detach()
     loss.backward()
     optimizer.step()
     optimizer.zero_grad()
     return {
         "loss": loss.item(),
-        "y_pred": logits.detach(),
+        "y_pred": logits,
         "y_true": batch["labels"].detach()
     }
 
