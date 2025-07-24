@@ -182,7 +182,7 @@ def evaluation_step(engine, batch, model):
             token_type_ids=batch["token_type_ids"]
         )
         logits = outputs.logits
-        if logits.dim() == 3:
+        if logits.dim() == 3 and logits.size(2) == 5: # 5 = num_labels for token classification
             logits = logits.permute(0, 2, 1)
         logits = logits
 
