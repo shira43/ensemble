@@ -181,8 +181,12 @@ def evaluation_step(engine, batch, model):
             attention_mask=batch["attention_mask"],
             token_type_ids=batch["token_type_ids"]
         )
+        logits = outputs.logits
+        if logits.dim() == 3:
+            logits = logits.permute(0, 2, 1)
+        logits = logits.cpu()
 
-        return outputs.logits, batch["labels"]
+        return logits, batch["labels"]
 
 
 def parse_args():
