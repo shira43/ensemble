@@ -159,7 +159,7 @@ def training_step(engine, batch, model, optimizer):
 
     if logits.dim() == 3:
         logits = logits.permute(0, 2, 1)
-    logits = logits.cpu()
+    logits = logits
 
     loss.backward()
     optimizer.step()
@@ -167,7 +167,7 @@ def training_step(engine, batch, model, optimizer):
     return {
         "loss": loss.item(),
         "y_pred": logits,
-        "y_true": batch["labels"].detach().cpu()
+        "y_true": batch["labels"].detach()
     }
 
 
@@ -184,7 +184,7 @@ def evaluation_step(engine, batch, model):
         logits = outputs.logits
         if logits.dim() == 3:
             logits = logits.permute(0, 2, 1)
-        logits = logits.cpu()
+        logits = logits
 
         return logits, batch["labels"]
 
