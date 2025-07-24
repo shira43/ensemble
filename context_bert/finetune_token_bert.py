@@ -53,7 +53,8 @@ def build_sequence(ds, max_seq_length=512):
             label_idx = 0
             for is_special in special_token_mask:
                 if is_special:
-                    labels_with_mask.append(-100)
+                    #TODO change back to -100 maybe. for now its just outside label
+                    labels_with_mask.append(0)
                 else:
                     labels_with_mask.append(labels[label_idx])
                     label_idx += 1
