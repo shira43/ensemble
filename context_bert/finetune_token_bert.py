@@ -53,8 +53,7 @@ def build_sequence(ds, max_seq_length=512):
             label_idx = 0
             for is_special in special_token_mask:
                 if is_special:
-                    #TODO change back to -100 maybe. for now its just outside label
-                    labels_with_mask.append(0)
+                    labels_with_mask.append(-100)
                 else:
                     labels_with_mask.append(labels[label_idx])
                     label_idx += 1
@@ -214,7 +213,7 @@ if __name__ == "__main__":
     dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
 
     train, val, test = filter_and_tokenize(dataset, max_length)
-
+    logger.info(train)
     dataloaders = get_loaders(train, val, test, batch_size, use_weighted_sampler, epoch_sample_num, data_collator)
     logger.info("Successfully loaded all Dataloaders.")
 
