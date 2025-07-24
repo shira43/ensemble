@@ -248,7 +248,7 @@ if __name__ == "__main__":
     metrics = {
         "loss": Loss(cross_entropy),
         #"acc": Accuracy(output_transform=acc_transform, device=gpu),
-        "precision": Precision(output_transform=cls_metric_transform, average=True, device=gpu),
+        #"precision": Precision(output_transform=cls_metric_transform, average=True, device=gpu),
         "recall": Recall(output_transform=cls_metric_transform, average=True, device=gpu),
         "f1": Fbeta(beta=1.0, output_transform=cls_metric_transform, average=True, device=gpu),
         "kappa": CohenKappa(output_transform=cls_metric_transform)  # CohenKappa moves to CPU/Numpy itself
