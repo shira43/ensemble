@@ -139,6 +139,24 @@ def cls_metric_transform(output):
     y      = y[mask]
     return y_pred, y
 
+def acc_transform(output):
+    """
+    output = (logits, labels)
+      logits : (B, C, S) – after _prepare_logits
+      labels : (B, S)
+    returns  = (logits_valid, labels_valid)
+      logits_valid : 2-D (N_valid, C)
+      labels_valid : 1-D (N_valid)
+    """
+    y_pred, y = output                      # logits, gold
+    B, C, S   = y_pred.shape                # C == 5
+    y_flat    = y.view(-1)                  # (B·S)
+    mask      = (y_flat >= 0) & (y_flat < C)
+
+    # keep only real tokens; still keep class dimension
+    logits_flat = y_pred.permute(0, 2, 1).reshape(-1, C)   # (B·S, C)
+    return logits_flat[mask], y_flat[mask]                 # shapes (N, C) , (N,)
+
 
 if __name__ == "__main__":
     cpu = torch.device('cpu')
@@ -208,10 +226,13 @@ if __name__ == "__main__":
     pbar = ProgressBar()
     pbar.attach(trainer)
 
-    # attach metrics
-    # trainer: batch-level loss/acc aggregated per epoch
-    Loss(cross_entropy, output_transform=lambda o: (o["y_pred"], o["y_true"])).attach(trainer, "loss")
-    Accuracy(output_transform=lambda o: (o["y_pred"], o["y_true"])).attach(trainer, "acc")
+    # # attach metrics
+    # # trainer: batch-level loss/acc aggregated per epoch
+    # Loss(cross_entropy, output_transform=lambda o: (o["y_pred"], o["y_true"])).attach(trainer, "loss")
+    # Accuracy(output_transform=lambda o: (o["y_pred"], o["y_true"])).attach(trainer, "acc")
+
+    Loss(cross_entropy, device=gpu).attach(trainer, "loss")
+    Accuracy(output_transform=acc_transform, device=gpu).attach(trainer, "acc")
 
     # evaluator: full-epoch metrics on val_loader and train_loader
     # metrics = {
@@ -228,7 +249,7 @@ if __name__ == "__main__":
 
     metrics = {
         "loss": Loss(cross_entropy),
-        "acc": Accuracy(),
+        "acc": Accuracy(output_transform=acc_transform, device=gpu),
         "precision": Precision(output_transform=cls_metric_transform, average=True, device=gpu),
         "recall": Recall(output_transform=cls_metric_transform, average=True, device=gpu),
         "f1": Fbeta(beta=1.0, output_transform=cls_metric_transform, average=True, device=gpu),
