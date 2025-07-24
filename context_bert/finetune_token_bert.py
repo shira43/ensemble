@@ -228,7 +228,7 @@ if __name__ == "__main__":
 
     metrics = {
         "loss": Loss(cross_entropy),
-        "acc": Accuracy(output_transform=cls_metric_transform, device=gpu),
+        "acc": Accuracy(),
         "precision": Precision(output_transform=cls_metric_transform, average=True, device=gpu),
         "recall": Recall(output_transform=cls_metric_transform, average=True, device=gpu),
         "f1": Fbeta(beta=1.0, output_transform=cls_metric_transform, average=True, device=gpu),
