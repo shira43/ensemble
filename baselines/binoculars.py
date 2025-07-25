@@ -102,8 +102,8 @@ DEVICE_2 = "cuda:1" if torch.cuda.device_count() > 1 else DEVICE_1
 class Binoculars(DetectorABC):
     def __init__(
         self,
-        observer_name_or_path: str = "./falcon-7b",
-        performer_name_or_path: str = "./falcon-7b-instruct",
+        observer_name_or_path: str = "meta-llama/Llama-3.2-1B",
+        performer_name_or_path: str = "meta-llama/Llama-3.2-1B-Instruct",
         use_bfloat16: bool = True,
         max_token_observed: int = 512,
     ) -> None:
