@@ -189,11 +189,14 @@ if __name__ == "__main__":
 
     logging.info("Program started.")
 
-    logging.info("Setting jsonl file path.")
-    jsonl_path = Path(__file__).resolve().parent.parent / "testSeq.jsonl"
+    # logging.info("Setting jsonl file path.")
+    # jsonl_path = Path(__file__).resolve().parent.parent / "testSeq.jsonl"
+    #data = load_dataset("json", data_files=str(jsonl_path), split="train")
+
 
     logging.info("Loading dataset.")
-    data = load_dataset("json", data_files=str(jsonl_path), split="train")
+    data = load_dataset("43shira43/coauthor-zeng")
+
     logging.info("Dataset loaded as Huggingface Dataset.")
 
 
