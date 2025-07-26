@@ -229,7 +229,7 @@ def run_detector_tokenized(
     labels = []
     predictions = []
     for batch in tqdm(dataset.batch(batch_size), desc="Processing Batches"):
-        labels.extend(batch["labels"])  # type: ignore
+        labels.extend(batch["label"])  # type: ignore
         predictions.extend(detector.process(batch)["prediction"])  # type: ignore
 
     return compute_metrics(
