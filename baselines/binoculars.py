@@ -107,7 +107,7 @@ class Binoculars(DetectorABC):
         use_bfloat16: bool = True,
         max_token_observed: int = 512,
     ) -> None:
-        super().__init__(AutoTokenizer.from_pretrained(observer_name_or_path))
+        super().__init__(AutoTokenizer.from_pretrained(observer_name_or_path, use_fast=False))
         self.observer_model = AutoModelForCausalLM.from_pretrained(
             observer_name_or_path,
             device_map={"": DEVICE_1},
