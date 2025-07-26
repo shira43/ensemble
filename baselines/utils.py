@@ -4,7 +4,7 @@ import evaluate
 import numpy as np
 from datasets import Dataset
 from numpy.typing import NDArray
-from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
+from sklearn.metrics import precision_recall_fscore_support, roc_auc_score, cohen_kappa_score
 from tqdm import tqdm
 from transformers.trainer_utils import EvalPrediction
 from abc import ABC, abstractmethod
@@ -12,7 +12,7 @@ import torch
 import numba as nb
 from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
 from transformers.tokenization_utils_base import BatchEncoding
-
+from ignite.metrics import Metric
 import logging
 
 logging.basicConfig(
@@ -29,6 +29,36 @@ warnings.filterwarnings(
     "ignore",
     message=r".*Was asked to gather along dimension \d+, but all input tensors were scalars.*",
 )
+
+
+# define cohenkappa
+class CohenKappa(Metric):
+    def __init__(self, output_transform=lambda x: x):
+        super(CohenKappa, self).__init__(output_transform=output_transform)
+        self._predictions = []
+        self._targets = []
+
+    def reset(self):
+        self._predictions = []
+        self._targets = []
+        super(CohenKappa, self).reset()
+
+    def update(self, output):
+        y_pred, y = output
+        y_pred = torch.argmax(y_pred, dim=1)
+        self._predictions.extend(y_pred.cpu().numpy())
+        self._targets.extend(y.cpu().numpy())
+
+    def compute(self):
+        global y_test_pred_results, y_test_true_results
+        y_test_pred_results = self._predictions
+        y_test_true_results = self._targets
+        return cohen_kappa_score(self._targets, self._predictions)
+
+
+
+
+
 
 @nb.jit(nopython=True)
 def sign(x):
@@ -139,16 +169,18 @@ def calculate_metrics(
         norm_scores = y_scores
     if not greater:
         norm_scores = 1 - norm_scores
-    roc_auc = roc_auc_score(y_true, y_preds, average="weighted")
+    #roc_auc = roc_auc_score(y_true, y_preds, average="weighted")
 
     calculated_metrics = {
         f"f1_score{suffix}": float(f1_score),  # type: ignore
         f"precision{suffix}": float(precision),  # type: ignore
         f"recall{suffix}": float(recall),  # type: ignore
         f"accuracy{suffix}": float(accuracy),  # type: ignore
-        f"roc_auc{suffix}": float(roc_auc),  # type: ignore
+        "kappa": CohenKappa(),
+        #f"roc_auc{suffix}": float(roc_auc),  # type: ignore
         f"fpr{suffix}": float(fpr),  # type: ignore
         f"tpr{suffix}": float(tpr),  # type: ignore
+
     }
 
     _precision_each, _recall_each, f1_score_each, _support_each = (
