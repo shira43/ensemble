@@ -4,25 +4,36 @@ import numpy as np, pandas as pd, torch, gc
 from tqdm import tqdm
 from binoculars import Binoculars          # your class
 
-RAW_DS = load_dataset("43shira43/coauthor-zeng", split="validation") \
+VAL_DS = load_dataset("43shira43/coauthor-zeng", split="validation") \
            .rename_columns({"sentence_text": "text"})            \
            .filter(lambda ex: ex["label"] in [0, 1, 2])
 
-train_idx, val_idx = train_test_split(
-    range(len(RAW_DS)),
-    test_size=0.20,
-    stratify=RAW_DS["label"],
-    random_state=42,
-)
-VAL_DS  = RAW_DS.select(val_idx)
-TEST_DS = RAW_DS.select(train_idx)
+TEST_DS = load_dataset("43shira43/coauthor-zeng", split="test") \
+           .rename_columns({"sentence_text": "text"})            \
+           .filter(lambda ex: ex["label"] in [0, 1, 2])
 
 def collect_scores(dataset, detector, batch_size=16):
     labels, scores = [], []
+
     for batch in tqdm(dataset.batch(batch_size), desc="Binoculars"):
+        # 1) grab raw texts
+        texts  = batch["text"]
         labels.extend(batch["label"])
-        scores.extend(detector.process(batch)["prediction"])
+
+        # 2) tokenize -> tensors on the observer model's device
+        enc = detector.tokenizer(
+            texts,
+            padding=True,
+            truncation=True,
+            max_length=detector.max_token_observed,
+            return_tensors="pt"
+        ).to(detector.observer_model.device)
+
+        # 3) call detector.predict (bypasses .process which needs tokenized dict)
+        scores.extend(detector.predict(enc))
+
     return np.array(scores), np.array(labels)
+
 
 det = Binoculars()
 
