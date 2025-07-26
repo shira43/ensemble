@@ -201,10 +201,30 @@ if __name__ == "__main__":
     #requires text field
     data = data.rename_columns({"sentence_text": "text"})
 
-
     def run_binoculars():
-        disable_caching()
-        return run_detector(Binoculars(), data, batch_size=16)
+        detector = Binoculars()
+        try:
+            disable_caching()
+            return run_detector(
+                detector,
+                data["test"],
+                batch_size=16,
+                threshold=GLOBAL_BINOCULARS_THRESHOLD,
+                sigmoid=False,
+                greater=False
+            )
+        finally:
+            detector.observer_model.to("cpu")
+            detector.performer_model.to("cpu")
+            del detector
+            gc.collect()
+            torch.cuda.synchronize()
+            torch.cuda.empty_cache()
+            gc.collect()
+
+    # def run_binoculars():
+    #     disable_caching()
+    #     return run_detector(Binoculars(), data, batch_size=16)
 
 
     scores_binoculars = run_binoculars()
