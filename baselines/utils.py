@@ -4,6 +4,7 @@ import evaluate
 import numpy as np
 from datasets import Dataset
 from numpy.typing import NDArray
+from tqdm import tqdm
 from transformers.trainer_utils import EvalPrediction
 from abc import ABC, abstractmethod
 import torch
