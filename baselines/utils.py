@@ -413,7 +413,7 @@ def run_detector_tokenized(
         labels.extend(batch["label"])  # type: ignore
         predictions.extend(detector.process(batch)["prediction"])  # type: ignore
     if multiclass:
-        return compute_metrics_multiclass((np.array(labels), np.array(predictions)))
+        return compute_metrics_multiclass((np.array(predictions), np.array(labels)))
     else:
         return compute_metrics(
             (np.array(predictions), np.array(labels)),
