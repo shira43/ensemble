@@ -182,22 +182,71 @@ class DetectorABC(ABC):
     @abstractmethod
     def process(self, inputs: dict) -> PredictionResults: ...
 
+#
+# def run_detector_tokenized(detector: DetectorABC, dataset: Dataset, batch_size=32):
+#     labels = []
+#     predictions = []
+#     for i in range(0, len(dataset), batch_size):
+#         batch = dataset[i: i + batch_size]
+#         labels.extend(batch["label"])  # type: ignore
+#         predictions.extend(detector.process(batch)["prediction"])  # type: ignore
+#
+#     logging.info("Returning logits....")
+#     return predictions
+#     # logging.info("Starting compute_metrics...")
+#     # return compute_metrics((np.array(predictions), np.array(labels)))  # type: ignore
+#
+#
+# def run_detector(detector: DetectorABC, dataset: Dataset, batch_size=32):
+#     """Sorting the samples by length (in number of tokens) enables efficient batching
+#     as batches of similar length have reduced overhead.
+#
+#     Note:
+#         Requires `detector.tokenize` to return "length" field!
+#     """
+#     dataset = dataset.map(
+#         detector.tokenize,
+#         input_columns=["text"],
+#         batched=True,
+#         batch_size=1024,
+#         desc="Tokenizing",
+#     ).sort("length")
+#
+#     logging.info("Starting run_detector_tokenized...")
+#     return run_detector_tokenized(detector, dataset, batch_size=batch_size)
 
-def run_detector_tokenized(detector: DetectorABC, dataset: Dataset, batch_size=32):
+
+
+def run_detector_tokenized(
+    detector: DetectorABC,
+    dataset: Dataset,
+    batch_size=32,
+    threshold: float = 0.5,
+    sigmoid: bool = True,
+    greater: bool = True,
+):
     labels = []
     predictions = []
-    for i in range(0, len(dataset), batch_size):
-        batch = dataset[i: i + batch_size]
-        labels.extend(batch["label"])  # type: ignore
+    for batch in tqdm(dataset.batch(batch_size), desc="Processing Batches"):
+        labels.extend(batch["labels"])  # type: ignore
         predictions.extend(detector.process(batch)["prediction"])  # type: ignore
 
-    logging.info("Returning logits....")
-    return predictions
-    # logging.info("Starting compute_metrics...")
-    # return compute_metrics((np.array(predictions), np.array(labels)))  # type: ignore
+    return compute_metrics(
+        (np.array(predictions), np.array(labels)),
+        threshold=threshold,
+        sigmoid=sigmoid,
+        greater=greater,
+    )  # type: ignore
 
 
-def run_detector(detector: DetectorABC, dataset: Dataset, batch_size=32):
+def run_detector(
+    detector: DetectorABC,
+    dataset: Dataset,
+    batch_size=32,
+    threshold: float = 0.5,
+    sigmoid: bool = True,
+    greater: bool = True,
+):
     """Sorting the samples by length (in number of tokens) enables efficient batching
     as batches of similar length have reduced overhead.
 
@@ -212,7 +261,11 @@ def run_detector(detector: DetectorABC, dataset: Dataset, batch_size=32):
         desc="Tokenizing",
     ).sort("length")
 
-    logging.info("Starting run_detector_tokenized...")
-    return run_detector_tokenized(detector, dataset, batch_size=batch_size)
-
-
+    return run_detector_tokenized(
+        detector,
+        dataset,
+        batch_size=batch_size,
+        threshold=threshold,
+        sigmoid=sigmoid,
+        greater=greater,
+    )
