@@ -195,10 +195,11 @@ if __name__ == "__main__":
 
 
     logging.info("Loading dataset.")
-    data = load_dataset("43shira43/coauthor-zeng")
+    data = load_dataset("43shira43/coauthor-zeng", split="test")
 
     logging.info("Dataset loaded as Huggingface Dataset.")
     #requires text field
+    data = data.filter(lambda example: example["label"] in [0, 1, 2])
     data = data.rename_columns({"sentence_text": "text"})
 
     def run_binoculars():
@@ -207,7 +208,7 @@ if __name__ == "__main__":
             disable_caching()
             return run_detector(
                 detector,
-                data["test"],
+                data,
                 batch_size=16,
                 threshold=GLOBAL_BINOCULARS_THRESHOLD,
                 sigmoid=False,
