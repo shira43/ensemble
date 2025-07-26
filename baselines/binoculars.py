@@ -198,7 +198,8 @@ if __name__ == "__main__":
     data = load_dataset("43shira43/coauthor-zeng")
 
     logging.info("Dataset loaded as Huggingface Dataset.")
-
+    #requires text field
+    data = data.rename_columns({"sentence_text": "text"})
 
 
     def run_binoculars():
