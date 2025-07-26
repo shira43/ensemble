@@ -35,8 +35,9 @@ def sign(x):
     return -1 if x < 0 else 1
 
 
-type Threshold = float
-type FPR = float
+Threshold = float
+FPR = float
+
 
 
 @nb.jit(nopython=True)
