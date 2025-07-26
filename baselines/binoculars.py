@@ -195,12 +195,12 @@ if __name__ == "__main__":
 
 
     logging.info("Loading dataset.")
-    data = load_dataset("43shira43/coauthor-zeng", split="test")
+    data = load_dataset("43shira43/coauthor-extended-np", split="test")
 
     logging.info("Dataset loaded as Huggingface Dataset.")
     #requires text field
     data = data.filter(lambda example: example["label"] in [0, 1, 2])
-    data = data.rename_columns({"sentence_text": "text"})
+    #data = data.rename_columns({"sentence_text": "text"})
 
     def run_binoculars():
         detector = Binoculars()
