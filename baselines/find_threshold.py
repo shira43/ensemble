@@ -80,17 +80,29 @@ print("Confusion matrix\n", confusion_matrix(test_labels, test_pred, labels=[0,1
 
 
 
-
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+
 
 df = pd.DataFrame({"score": test_scores, "label": test_labels})
 labels_map = {0: "human", 1: "ai", 2: "mixed"}
 
-plt.figure(figsize=(7,4))
+plt.figure(figsize=(7, 4))
 for lbl, name in labels_map.items():
-    plt.hist(df[df.label == lbl].score, bins=60, density=True, alpha=0.5, label=name)
+    plt.hist(df[df.label == lbl].score,
+             bins=60, density=True, alpha=0.5, label=name)
+
 plt.axvline(best_hi, linestyle="--", linewidth=2)
 plt.axvline(best_lo, linestyle="--", linewidth=2)
-plt.xlabel("Binoculars score"); plt.ylabel("density")
-plt.title("Score distribution with learnt thresholds"); plt.legend(); plt.tight_layout()
-plt.show()
+plt.xlabel("Binoculars score")
+plt.ylabel("density")
+plt.title("Score distribution with learnt thresholds")
+plt.legend()
+plt.tight_layout()
+
+# 2️⃣  save instead of show
+plt.savefig("score_hist.png", dpi=150)   # PNG   (or "score_hist.pdf" for PDF)
+plt.close()
+print("Plot written to score_hist.png")
