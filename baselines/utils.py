@@ -1,10 +1,10 @@
 import warnings
-from typing import TypedDict, Union
+from typing import TypedDict, Union, Optional
 import evaluate
 import numpy as np
 from datasets import Dataset
 from numpy.typing import NDArray
-from sklearn.metrics import precision_recall_fscore_support, roc_auc_score, cohen_kappa_score
+from sklearn.metrics import precision_recall_fscore_support, roc_auc_score, cohen_kappa_score, confusion_matrix
 from tqdm import tqdm
 from transformers.trainer_utils import EvalPrediction
 from abc import ABC, abstractmethod
@@ -56,8 +56,81 @@ class CohenKappa(Metric):
         return cohen_kappa_score(self._targets, self._predictions)
 
 
+def score_to_label(scores: NDArray, t_hi: float, t_lo: float) -> NDArray:
+    """
+    Convert raw Binoculars scores to 0/1/2 labels.
+
+    human (0)  : score >= t_hi
+    ai    (1)  : score <= t_lo
+    mixed (2)  : else
+    """
+    preds = np.full_like(scores, fill_value=2, dtype=int)     # default = mixed
+    preds[scores >= t_hi] = 0
+    preds[scores <= t_lo] = 1
+    return preds
 
 
+def choose_thresholds(y_true: NDArray, scores: NDArray) -> tuple[float, float]:
+    """Mid-points between the class means."""
+    mu_h = scores[y_true == 0].mean()
+    mu_a = scores[y_true == 1].mean()
+    mu_m = scores[y_true == 2].mean()
+
+    t_hi = 0.5 * (mu_h + mu_m)         # between human and mixed
+    t_lo = 0.5 * (mu_m + mu_a)         # between mixed and ai
+    return t_hi, t_lo
+
+
+def calculate_metrics_multiclass(
+    y_true: NDArray,
+    y_pred: NDArray,
+    suffix: str = "",
+) -> dict[str, float]:
+    """Macro & weighted P/R/F1 + per-class F1 and κ."""
+    p_w, r_w, f1_w, _ = precision_recall_fscore_support(
+        y_true, y_pred, average="weighted", zero_division=0
+    )
+    p_m, r_m, f1_m, _ = precision_recall_fscore_support(
+        y_true, y_pred, average="macro", zero_division=0
+    )
+    # per-class (index 0→human, 1→AI, 2→mixed)
+    _, _, f1_each, _ = precision_recall_fscore_support(
+        y_true, y_pred, average=None, zero_division=0, labels=[0, 1, 2]
+    )
+
+    return {
+        f"precision_weight{suffix}": p_w,
+        f"recall_weight{suffix}":    r_w,
+        f"f1_weight{suffix}":        f1_w,
+        f"precision_macro{suffix}":  p_m,
+        f"recall_macro{suffix}":     r_m,
+        f"f1_macro{suffix}":         f1_m,
+        f"f1_human{suffix}":         f1_each[0],
+        f"f1_ai{suffix}":            f1_each[1],
+        f"f1_mix{suffix}":           f1_each[2],
+        f"kappa{suffix}":            cohen_kappa_score(y_true, y_pred),
+    }
+
+
+def compute_metrics_multiclass(
+    eval_pred: EvalPrediction,
+    thresholds: Optional[tuple[float, float]] = None,
+) -> dict[str, float]:
+    """Validation/test metric block for 3-class detection."""
+    scores, y_true = map(np.array, eval_pred)   # logits already contain raw scores
+
+    if thresholds is None:
+        thresholds = choose_thresholds(y_true, scores)
+    t_hi, t_lo = thresholds
+
+    y_pred = score_to_label(scores, t_hi, t_lo)
+    metrics = {"n_samples": len(y_true), "t_hi": t_hi, "t_lo": t_lo}
+    metrics |= calculate_metrics_multiclass(y_true, y_pred)
+
+    # optional: confusion matrix for quick inspection
+    cm = confusion_matrix(y_true, y_pred, labels=[0, 1, 2])
+    metrics["confusion_matrix"] = cm
+    return metrics
 
 
 @nb.jit(nopython=True)
@@ -176,7 +249,7 @@ def calculate_metrics(
         f"precision{suffix}": float(precision),  # type: ignore
         f"recall{suffix}": float(recall),  # type: ignore
         f"accuracy{suffix}": float(accuracy),  # type: ignore
-        "kappa": CohenKappa(),
+        "kappa": float(CohenKappa()),
         #f"roc_auc{suffix}": float(roc_auc),  # type: ignore
         f"fpr{suffix}": float(fpr),  # type: ignore
         f"tpr{suffix}": float(tpr),  # type: ignore
@@ -332,19 +405,22 @@ def run_detector_tokenized(
     threshold: float = 0.5,
     sigmoid: bool = True,
     greater: bool = True,
+    multiclass: bool = True,
 ):
     labels = []
     predictions = []
     for batch in tqdm(dataset.batch(batch_size), desc="Processing Batches"):
         labels.extend(batch["label"])  # type: ignore
         predictions.extend(detector.process(batch)["prediction"])  # type: ignore
-
-    return compute_metrics(
-        (np.array(predictions), np.array(labels)),
-        threshold=threshold,
-        sigmoid=sigmoid,
-        greater=greater,
-    )  # type: ignore
+    if multiclass:
+        return compute_metrics_multiclass((np.array(labels), np.array(predictions)))
+    else:
+        return compute_metrics(
+            (np.array(predictions), np.array(labels)),
+            threshold=threshold,
+            sigmoid=sigmoid,
+            greater=greater,
+        )  # type: ignore
 
 
 def run_detector(
@@ -354,6 +430,7 @@ def run_detector(
     threshold: float = 0.5,
     sigmoid: bool = True,
     greater: bool = True,
+    multiclass: bool = True,
 ):
     """Sorting the samples by length (in number of tokens) enables efficient batching
     as batches of similar length have reduced overhead.
@@ -376,4 +453,5 @@ def run_detector(
         threshold=threshold,
         sigmoid=sigmoid,
         greater=greater,
+        multiclass=multiclass,
     )
