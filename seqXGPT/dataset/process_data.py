@@ -2,14 +2,6 @@ import pandas as pd
 import json
 
 
-# read csv data
-data_df = pd.read_csv('author_data.csv')
-
-
-# Split the data into train, valid, and test DataFrames
-train_df = data_df[data_df['train_ix'] == 'train']
-valid_df = data_df[data_df['train_ix'] == 'valid']
-test_df = data_df[data_df['train_ix'] == 'test']
 
 # Function to append a document to the formatted data list
 # Function to append a document to the formatted data list
@@ -90,6 +82,18 @@ def obtain_jsonl(data_df, data_type):
 
     return jsonl_data
 
-obtain_jsonl(train_df, 'train')
-obtain_jsonl(valid_df, 'valid')
-obtain_jsonl(test_df, 'test')
+
+if __name__ == "__main__":
+
+    # read csv data
+    data_df = pd.read_csv('author_data.csv')
+
+
+    # Split the data into train, valid, and test DataFrames
+    train_df = data_df[data_df['train_ix'] == 'train']
+    valid_df = data_df[data_df['train_ix'] == 'valid']
+    test_df = data_df[data_df['train_ix'] == 'test']
+
+    obtain_jsonl(train_df, 'train')
+    obtain_jsonl(valid_df, 'valid')
+    obtain_jsonl(test_df, 'test')
