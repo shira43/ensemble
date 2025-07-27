@@ -10,9 +10,9 @@ import torch.nn as nn
 
 from tqdm import tqdm, trange
 from sklearn.metrics import precision_score, recall_score
-from bitsandbytes.optim import AdamW
-# TODO this was original, check if i should use the original instead of bitsandbytes import for AdamW
-# from transformers.optimization import AdamW, get_linear_schedule_with_warmup
+# from bitsandbytes.optim import AdamW
+# # TODO this was original, check if i should use the original instead of bitsandbytes import for AdamW
+from transformers.optimization import AdamW, get_linear_schedule_with_warmup
 from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score
 from transformers import get_linear_schedule_with_warmup
 
