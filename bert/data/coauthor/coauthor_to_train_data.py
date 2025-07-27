@@ -38,7 +38,7 @@ def get_selected_data_table_sorted(ds):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # we = writing essay dataset
-    parser.add_argument('--dataset', default='coauthor_zeng', choices=["pasted", "coauthor-base", "coauthor-extended", "coauthor_zeng"])
+    parser.add_argument('--dataset', default='coauthor_zeng', choices=["pasted", "coauthor-base", "coauthor-extended-np", "coauthor_zeng"])
     args = parser.parse_args()
     dataset = args.dataset
     if dataset == "coauthor_zeng":
@@ -50,8 +50,8 @@ if __name__ == '__main__':
     elif dataset == "coauthor-base":
         coauthor_base = load_dataset("43shira43/coauthor-base")
         sorted_data = get_selected_data_table_sorted(coauthor_base)
-    elif dataset == "coauthor-extended":
-        coauthor_extended = load_dataset("43shira43/coauthor-extended-base")
+    elif dataset == "coauthor-extended-np":
+        coauthor_extended = load_dataset("43shira43/coauthor-extended-np")
         sorted_data = get_selected_data_table_sorted(coauthor_extended)
     else:
         print("DATASET NOT FOUND")
