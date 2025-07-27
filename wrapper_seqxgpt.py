@@ -1,3 +1,4 @@
+import argparse
 import sys
 from argparse import Namespace
 
@@ -5,13 +6,14 @@ import pandas as pd
 #from fairseq.benchmark.benchmark_multihead_attention import BATCH
 from tqdm import tqdm
 
-from datasets import Dataset
+from datasets import Dataset, load_dataset
 from seqXGPT.SeqXGPT.dataloader import DataManager
 from seqXGPT.SeqXGPT.model import ModelWiseTransformerClassifier
 from wrapper_helper_seqxgpt import gen_features
-
+from seqXGPT.dataset.process_data import obtain_jsonl
 sys.path.append("seqXGPT/SeqXGPT")
 from seqXGPT.SeqXGPT.train import SupervisedTrainer
+
 import torch
 
 # bmes labels for en_labels (api, user_api and human)
@@ -149,16 +151,69 @@ class SeqXGPTWrapper:
 
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', type=str, default='coauthor-zeng', choices=['coauthor-zeng', 'coauthor-extended-np'])
+    parser.add_argument('--only_gen_features', type=bool, default=True)
 
+
+    return parser.parse_args()
 
 if __name__ == "__main__":
-    wrapper = SeqXGPTWrapper("input", "out", "seqXGPT/dataset/coauthor/train.jsonl", "seqXGPT/dataset/coauthor/val.jsonl")
+
+    args = parse_args()
+    if args.only_gen_features:
+        dataset_name = f"43shira43/{args.dataset}"
+        data_df = load_dataset(dataset_name)
+        # Filter out possible prompts
+        data_df = data_df.filter(lambda example: example["label"] in [0, 1, 2])
+
+        for split in data_df.keys():
+            if "text" in data_df[split].column_names:
+                data_df[split] = data_df[split].rename_columns({
+                    "text": "sentence_text",
+                    "id": "session_id",
+                    "source": "sentence_source", })
+
+        train_df = data_df["train"].to_pandas()
+        val_df = data_df["validation"].to_pandas()
+        final_train_df = pd.concat([train_df, val_df], ignore_index=True)
+
+        test_df = data_df["test"].to_pandas()
+
+        if args.dataset == 'coauthor-zeng':
+            #generate train features
+            train_jsonl = obtain_jsonl(final_train_df, 'datasets/seqXGPT/coauthor/train')
+            train_output = "datasets/seqXGPT/coauthor/train_features.jsonl"
+            gen_features(train_jsonl, train_output)
+
+            #generate test features
+            test_jsonl = obtain_jsonl(test_df, 'coauthor/coauthor/test')
+            test_output = "datasets/seqXGPT/coauthor/test_features.jsonl"
+            gen_features(test_jsonl, test_output)
 
 
-    # TODO add column prompt_len = 0 to all data of df
-    # TODO change to correct .jsonl so test works.
-    x_data = pd.read_json("testSeq.jsonl", orient='records', lines=True)
-    logits = wrapper.predict_logits(x_data)
-    print(logits)
-    print(logits.shape)
+
+
+        else:
+            train_jsonl = obtain_jsonl(final_train_df, 'datasets/seqXGPT/coauthor-extended/train')
+            train_output = "datasets/seqXGPT/coauthor-extended/train_features.jsonl"
+            gen_features(train_jsonl, train_output)
+
+            test_jsonl = obtain_jsonl(train_df, 'datasets/seqXGPT/coauthor-extended/test')
+            test_output = "datasets/seqXGPT/coauthor-extended/test_features.jsonl"
+            gen_features(test_jsonl, test_output)
+
+            print("Finished generating features. Look in datasets folder.")
+
+    else:
+        wrapper = SeqXGPTWrapper("input", "out", "seqXGPT/dataset/coauthor/train.jsonl", "seqXGPT/dataset/coauthor/val.jsonl")
+
+
+        # TODO add column prompt_len = 0 to all data of df
+        # TODO change to correct .jsonl so test works.
+        x_data = pd.read_json("testSeq.jsonl", orient='records', lines=True)
+        logits = wrapper.predict_logits(x_data)
+        print(logits)
+        print(logits.shape)
 

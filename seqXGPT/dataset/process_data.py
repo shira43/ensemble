@@ -88,6 +88,8 @@ def obtain_jsonl(data_df, data_type):
         f.write(jsonl_data)
         f.close()
 
+    return jsonl_data
+
 obtain_jsonl(train_df, 'train')
 obtain_jsonl(valid_df, 'valid')
 obtain_jsonl(test_df, 'test')
