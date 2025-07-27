@@ -193,28 +193,30 @@ if __name__ == "__main__":
         if args.dataset == 'coauthor-zeng':
             logger.info("Generate train features now...")
             #generate train features
-            train_jsonl = obtain_jsonl(final_train_df, 'datasets/seqXGPT/coauthor/train')
+            obtain_jsonl(final_train_df, 'datasets/seqXGPT/coauthor/train')
+            train_path = 'datasets/seqXGPT/coauthor/train.jsonl'
             train_output = "datasets/seqXGPT/coauthor/train_features.jsonl"
             logger.info(" Starting gen_features now...")
-            gen_features(train_jsonl, train_output)
+            gen_features(train_path, train_output)
 
             logger.info("Generate test features now...")
             #generate test features
-            test_jsonl = obtain_jsonl(test_df, 'coauthor/coauthor/test')
+            obtain_jsonl(test_df, 'coauthor/coauthor/test')
+            test_path = 'datasets/seqXGPT/coauthor-extended/test.jsonl'
             test_output = "datasets/seqXGPT/coauthor/test_features.jsonl"
-            gen_features(test_jsonl, test_output)
+            gen_features(test_path, test_output)
 
 
 
 
         else:
             obtain_jsonl(final_train_df, 'datasets/seqXGPT/coauthor-extended/train')
-            train_path = 'datasets/seqXGPT/coauthor-extended/train'
+            train_path = 'datasets/seqXGPT/coauthor-extended/train.jsonl'
             train_output = "datasets/seqXGPT/coauthor-extended/train_features.jsonl"
             gen_features(train_path, train_output)
 
             obtain_jsonl(train_df, 'datasets/seqXGPT/coauthor-extended/test')
-            test_path = 'datasets/seqXGPT/coauthor-extended/train'
+            test_path = 'datasets/seqXGPT/coauthor-extended/train.jsonl'
             test_output = "datasets/seqXGPT/coauthor-extended/test_features.jsonl"
             gen_features(test_path, test_output)
 
