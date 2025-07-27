@@ -18,9 +18,15 @@ class BertClassifier(th.nn.Module):
         self.classifier = th.nn.Linear(hidden, nb_class)
 
     def forward(self, input_ids, attention_mask):
-        cls_feats = self.bert_model(input_ids, attention_mask)[0][:, 0]
-        cls_logit = self.classifier(cls_feats)
-        return cls_logit
+        # cls_feats = self.bert_model(input_ids, attention_mask)[0][:, 0]
+        # cls_logit = self.classifier(cls_feats)
+        # return cls_logit
+
+        outputs = self.bert_model(input_ids=input_ids,
+                                  attention_mask=attention_mask)
+        cls_feats = outputs.last_hidden_state[:, 0]  # [CLS] vector
+        return self.classifier(cls_feats)
+
 
 class DebertaClassifier(th.nn.Module):
     def __init__(self, pretrained_model='', nb_class=20):
