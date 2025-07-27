@@ -4,13 +4,13 @@ import numpy as np, pandas as pd, torch, gc
 from tqdm import tqdm
 from binoculars import Binoculars          # your class
 
-VAL_DS = load_dataset("43shira43/coauthor-zeng", split="validation") \
-           .rename_columns({"sentence_text": "text"})            \
-           .filter(lambda ex: ex["label"] in [0, 1, 2])
+VAL_DS = load_dataset("43shira43/coauthor-extended-np", split="validation") \
+           # .rename_columns({"sentence_text": "text"})            \
+           # .filter(lambda ex: ex["label"] in [0, 1, 2])
 
-TEST_DS = load_dataset("43shira43/coauthor-zeng", split="test") \
-           .rename_columns({"sentence_text": "text"})            \
-           .filter(lambda ex: ex["label"] in [0, 1, 2])
+TEST_DS = load_dataset("43shira43/coauthor-extended-np", split="test") \
+           # .rename_columns({"sentence_text": "text"})            \
+           # .filter(lambda ex: ex["label"] in [0, 1, 2])
 
 def collect_scores(dataset, detector, batch_size=16):
     labels, scores = [], []
@@ -102,7 +102,7 @@ plt.title("Score distribution with learnt thresholds")
 plt.legend()
 plt.tight_layout()
 
-# 2️⃣  save instead of show
-plt.savefig("score_hist.png", dpi=150)   # PNG   (or "score_hist.pdf" for PDF)
+#save
+plt.savefig("score_hist_extended.png", dpi=150)
 plt.close()
-print("Plot written to score_hist.png")
+print("Plot written to score_hist_extended.png")
