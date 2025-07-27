@@ -10,8 +10,8 @@ class BertClassifier(th.nn.Module):
         super(BertClassifier, self).__init__()
         self.nb_class = nb_class
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
-        self.bert_model = BertForSequenceClassification.from_pretrained(pretrained_model)
-        #self.bert_model = AutoModel.from_pretrained(pretrained_model)
+        #self.bert_model = BertForSequenceClassification.from_pretrained(pretrained_model)
+        self.bert_model = AutoModel.from_pretrained(pretrained_model)
         # self.feat_dim = self.bert_model.config.hidden_size
         hidden = self.bert_model.config.hidden_size
         # self.feat_dim = list(self.bert_model.modules())[-2].out_features
