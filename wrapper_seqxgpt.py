@@ -208,13 +208,15 @@ if __name__ == "__main__":
 
 
         else:
-            train_jsonl = obtain_jsonl(final_train_df, 'datasets/seqXGPT/coauthor-extended/train')
+            obtain_jsonl(final_train_df, 'datasets/seqXGPT/coauthor-extended/train')
+            train_path = 'datasets/seqXGPT/coauthor-extended/train'
             train_output = "datasets/seqXGPT/coauthor-extended/train_features.jsonl"
-            gen_features(train_jsonl, train_output)
+            gen_features(train_path, train_output)
 
-            test_jsonl = obtain_jsonl(train_df, 'datasets/seqXGPT/coauthor-extended/test')
+            obtain_jsonl(train_df, 'datasets/seqXGPT/coauthor-extended/test')
+            test_path = 'datasets/seqXGPT/coauthor-extended/train'
             test_output = "datasets/seqXGPT/coauthor-extended/test_features.jsonl"
-            gen_features(test_jsonl, test_output)
+            gen_features(test_path, test_output)
 
             print("Finished generating features. Look in datasets folder.")
 
