@@ -1,11 +1,192 @@
 import random
 import nltk
+import sys
+import networkx as nx
 import pickle as pkl
 import scipy.sparse as sp
 import numpy as np
 from math import log
-from bert.utils.utils import load_corpus
-from bert.data.coauthor.coathor_to_train_data import reorder_dataframe
+from bert.utils.utils import sample_mask, parse_index_file
+from bert.data.coauthor.coauthor_to_train_data import reorder_dataframe
+
+
+def load_data(dataset_str):
+    """
+    Copied from bert.utils -> Only changed path from data/ to bert/data where necessary.
+
+    Loads input data from gcn/data directory
+
+    ind.dataset_str.x => the feature vectors of the training instances as scipy.sparse.csr.csr_matrix object;
+    ind.dataset_str.tx => the feature vectors of the test instances as scipy.sparse.csr.csr_matrix object;
+    ind.dataset_str.allx => the feature vectors of both labeled and unlabeled training instances
+        (a superset of ind.dataset_str.x) as scipy.sparse.csr.csr_matrix object;
+    ind.dataset_str.y => the one-hot labels of the labeled training instances as numpy.ndarray object;
+    ind.dataset_str.ty => the one-hot labels of the test instances as numpy.ndarray object;
+    ind.dataset_str.ally => the labels for instances in ind.dataset_str.allx as numpy.ndarray object;
+    ind.dataset_str.graph => a dict in the format {index: [index_of_neighbor_nodes]} as collections.defaultdict
+        object;
+    ind.dataset_str.test.index => the indices of test instances in graph, for the inductive setting as list object.
+
+    All objects above must be saved using python pickle module.
+
+    :param dataset_str: Dataset name
+    :return: All data input files loaded (as well the training/test data).
+    """
+    names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
+    objects = []
+    for i in range(len(names)):
+        with open("bert/data/ind.{}.{}".format(dataset_str, names[i]), 'rb') as f:
+            if sys.version_info > (3, 0):
+                objects.append(pkl.load(f, encoding='latin1'))
+            else:
+                objects.append(pkl.load(f))
+
+    x, y, tx, ty, allx, ally, graph = tuple(objects)
+    test_idx_reorder = parse_index_file(
+        "bert/data/ind.{}.test.index".format(dataset_str))
+    test_idx_range = np.sort(test_idx_reorder)
+    print(x.shape, y.shape, tx.shape, ty.shape, allx.shape, ally.shape)
+
+    # training nodes are training docs, no initial features
+    # print("x: ", x)
+    # test nodes are training docs, no initial features
+    # print("tx: ", tx)
+    # both labeled and unlabeled training instances are training docs and words
+    # print("allx: ", allx)
+    # training labels are training doc labels
+    # print("y: ", y)
+    # test labels are test doc labels
+    # print("ty: ", ty)
+    # ally are labels for labels for allx, some will not have labels, i.e., all 0
+    # print("ally: \n")
+    # for i in ally:
+    # if(sum(i) == 0):
+    # print(i)
+    # graph edge weight is the word co-occurence or doc word frequency
+    # no need to build map, directly build csr_matrix
+    # print('graph : ', graph)
+
+    if dataset_str == 'citeseer':
+        # Fix citeseer dataset (there are some isolated nodes in the graph)
+        # Find isolated nodes, add them as zero-vecs into the right position
+        test_idx_range_full = range(
+            min(test_idx_reorder), max(test_idx_reorder)+1)
+        tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))
+        tx_extended[test_idx_range-min(test_idx_range), :] = tx
+        tx = tx_extended
+        ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))
+        ty_extended[test_idx_range-min(test_idx_range), :] = ty
+        ty = ty_extended
+
+    features = sp.vstack((allx, tx)).tolil()
+    features[test_idx_reorder, :] = features[test_idx_range, :]
+    adj = nx.adjacency_matrix(nx.from_dict_of_lists(graph))
+
+    labels = np.vstack((ally, ty))
+    labels[test_idx_reorder, :] = labels[test_idx_range, :]
+    # print(len(labels))
+
+    idx_test = test_idx_range.tolist()
+    # print(idx_test)
+    idx_train = range(len(y))
+    idx_val = range(len(y), len(y)+500)
+
+    train_mask = sample_mask(idx_train, labels.shape[0])
+    val_mask = sample_mask(idx_val, labels.shape[0])
+    test_mask = sample_mask(idx_test, labels.shape[0])
+
+    y_train = np.zeros(labels.shape)
+    y_val = np.zeros(labels.shape)
+    y_test = np.zeros(labels.shape)
+    y_train[train_mask, :] = labels[train_mask, :]
+    y_val[val_mask, :] = labels[val_mask, :]
+    y_test[test_mask, :] = labels[test_mask, :]
+
+    return adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask
+
+
+def load_corpus(dataset_str):
+    """
+    Copied from bert.utils -> Only changed path from data/ to bert/data where necessary.
+    Loads input corpus from gcn/data directory
+
+    ind.dataset_str.x => the feature vectors of the training docs as scipy.sparse.csr.csr_matrix object;
+    ind.dataset_str.tx => the feature vectors of the test docs as scipy.sparse.csr.csr_matrix object;
+    ind.dataset_str.allx => the feature vectors of both labeled and unlabeled training docs/words
+        (a superset of ind.dataset_str.x) as scipy.sparse.csr.csr_matrix object;
+    ind.dataset_str.y => the one-hot labels of the labeled training docs as numpy.ndarray object;
+    ind.dataset_str.ty => the one-hot labels of the test docs as numpy.ndarray object;
+    ind.dataset_str.ally => the labels for instances in ind.dataset_str.allx as numpy.ndarray object;
+    ind.dataset_str.adj => adjacency matrix of word/doc nodes as scipy.sparse.csr.csr_matrix object;
+    ind.dataset_str.train.index => the indices of training docs in original doc list.
+
+    All objects above must be saved using python pickle module.
+
+    :param dataset_str: Dataset name
+    :return: All data input files loaded (as well the training/test data).
+    """
+
+    names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'adj']
+    objects = []
+    for i in range(len(names)):
+        with open("bert/data/ind.{}.{}".format(dataset_str, names[i]), 'rb') as f:
+            if sys.version_info > (3, 0):
+                objects.append(pkl.load(f, encoding='latin1'))
+            else:
+                objects.append(pkl.load(f))
+
+    x, y, tx, ty, allx, ally, adj = tuple(objects)
+    print(x.shape, y.shape, tx.shape, ty.shape, allx.shape, ally.shape)
+
+    features = sp.vstack((allx, tx)).tolil()
+    labels = np.vstack((ally, ty))
+    print(len(labels))
+
+    train_idx_orig = parse_index_file(
+        "bert/data/{}.train.index".format(dataset_str))
+    train_size = len(train_idx_orig)
+    real_train_size = x.shape[0]
+    val_size = train_size - x.shape[0]
+    test_size = tx.shape[0]
+    print(f"Train Size: {real_train_size}, Validation Size: {val_size}, Test Size: {test_size}")
+
+    idx_train = range(len(y))
+    idx_val = range(len(y), len(y) + val_size)
+    idx_test = range(allx.shape[0], allx.shape[0] + test_size)
+
+    train_mask = sample_mask(idx_train, labels.shape[0])
+    val_mask = sample_mask(idx_val, labels.shape[0])
+    test_mask = sample_mask(idx_test, labels.shape[0])
+
+    y_train = np.zeros(labels.shape)
+    y_val = np.zeros(labels.shape)
+    y_test = np.zeros(labels.shape)
+    y_train[train_mask, :] = labels[train_mask, :]
+    y_val[val_mask, :] = labels[val_mask, :]
+    y_test[test_mask, :] = labels[test_mask, :]
+
+    adj = adj + adj.T.multiply(adj.T > adj) - adj.multiply(adj.T > adj)
+
+    return adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask, train_size, test_size
+
+
+def sparse_to_tuple(sparse_mx):
+    """Convert sparse matrix to tuple representation."""
+    def to_tuple(mx):
+        if not sp.isspmatrix_coo(mx):
+            mx = mx.tocoo()
+        coords = np.vstack((mx.row, mx.col)).transpose()
+        values = mx.data
+        shape = mx.shape
+        return coords, values, shape
+
+    if isinstance(sparse_mx, list):
+        for i in range(len(sparse_mx)):
+            sparse_mx[i] = to_tuple(sparse_mx[i])
+    else:
+        sparse_mx = to_tuple(sparse_mx)
+
+    return sparse_mx
 
 
 def prepare_for_graph(input_df):
@@ -31,14 +212,14 @@ def prepare_for_graph(input_df):
 
     selected_data_table_sorted['id_index'] = range(len(selected_data_table_sorted))
 
-    with open('../corpus/we.clean.txt', 'w', encoding='utf-8') as f:
+    with open('bert/data/corpus/we.clean.txt', 'w', encoding='utf-8') as f:
         for sentence in selected_data_table_sorted['split_sentence_text']:
             f.write(sentence + '\n')
 
 
     # Write id_index, train_ix, label columns to txt file
     selected_data_table_sorted[['id_index', 'train_ix', 'label']].to_csv(
-        '../we.txt', sep='\t', index=False, header=False
+        'bert/data/we.txt', sep='\t', index=False, header=False
     )
 
     print("We files in bert.coauthor and bert.coauthor.clean have successfully been overwritten with current dataset information.")
@@ -72,7 +253,7 @@ def build_graph():
     doc_test_list = []
 
     # load label file from data dic path
-    f = open('data/' + dataset + '.txt', 'r')
+    f = open('bert/data/' + dataset + '.txt', 'r')
     label_lines = f.readlines()
 
     valid_num = 0
@@ -100,7 +281,7 @@ def build_graph():
     # print(doc_test_list)
     # load samples which was cut words, named .clean.txt
     doc_content_list = []
-    f = open('data/corpus/' + dataset + '.clean.txt', 'r')
+    f = open('bert/data/corpus/' + dataset + '.clean.txt', 'r')
     lines = f.readlines()
     for line in lines:
         doc_content_list.append(line.strip())
@@ -121,7 +302,7 @@ def build_graph():
     # train_ids = train_ids[:int(0.2 * len(train_ids))]
 
     train_ids_str = '\n'.join(str(index) for index in train_ids)
-    f = open('data/' + dataset + '.train.index', 'w')
+    f = open('bert/data/' + dataset + '.train.index', 'w')
     f.write(train_ids_str)
     f.close()
 
@@ -136,7 +317,7 @@ def build_graph():
         random.shuffle(test_ids)
 
     test_ids_str = '\n'.join(str(index) for index in test_ids)
-    f = open('data/' + dataset + '.test.index', 'w')
+    f = open('bert/data/' + dataset + '.test.index', 'w')
     f.write(test_ids_str)
     f.close()
 
@@ -152,11 +333,11 @@ def build_graph():
     shuffle_doc_name_str = '\n'.join(shuffle_doc_name_list)
     shuffle_doc_words_str = '\n'.join(shuffle_doc_words_list)
 
-    f = open('data/' + dataset + '_shuffle.txt', 'w')
+    f = open('bert/data/' + dataset + '_shuffle.txt', 'w')
     f.write(shuffle_doc_name_str)
     f.close()
 
-    f = open('data/corpus/' + dataset + '_shuffle.txt', 'w')
+    f = open('bert/data/corpus/' + dataset + '_shuffle.txt', 'w')
     f.write(shuffle_doc_words_str)
     f.close()
 
@@ -202,7 +383,7 @@ def build_graph():
 
     vocab_str = '\n'.join(vocab)
 
-    f = open('data/corpus/' + dataset + '_vocab.txt', 'w')
+    f = open('bert/data/corpus/' + dataset + '_vocab.txt', 'w')
     f.write(vocab_str)
     f.close()
 
@@ -227,7 +408,7 @@ def build_graph():
     string = '\n'.join(definitions)
 
 
-    f = open('data/corpus/' + dataset + '_vocab_def.txt', 'w')
+    f = open('bert/data/corpus/' + dataset + '_vocab_def.txt', 'w')
     f.write(string)
     f.close()
 
@@ -250,11 +431,11 @@ def build_graph():
 
     string = '\n'.join(word_vectors)
 
-    f = open('data/corpus/' + dataset + '_word_vectors.txt', 'w')
+    f = open('bert/data/corpus/' + dataset + '_word_vectors.txt', 'w')
     f.write(string)
     f.close()
 
-    word_vector_file = 'data/corpus/' + dataset + '_word_vectors.txt'
+    word_vector_file = 'bert/data/corpus/' + dataset + '_word_vectors.txt'
     _, embd, word_vector_map = loadWord2Vec(word_vector_file)
     word_embeddings_dim = len(embd[0])
     '''
@@ -272,7 +453,7 @@ def build_graph():
 
     # 把标签信息读入
     label_list_str = '\n'.join(label_list)
-    f = open('data/corpus/' + dataset + '_labels.txt', 'w')
+    f = open('bert/data/corpus/' + dataset + '_labels.txt', 'w')
     f.write(label_list_str)
     f.close()
 
@@ -293,7 +474,7 @@ def build_graph():
     real_train_doc_names = shuffle_doc_name_list[:real_train_size]
     real_train_doc_names_str = '\n'.join(real_train_doc_names)
 
-    f = open('data/' + dataset + '.real_train.name', 'w')
+    f = open('bert/data/' + dataset + '.real_train.name', 'w')
     f.write(real_train_doc_names_str)
     f.close()
     # x is real_data_set not initial train label data
@@ -567,31 +748,31 @@ def build_graph():
         (weight, (row, col)), shape=(node_size, node_size))
 
     # dump objects
-    f = open("data/ind.{}.x".format(dataset), 'wb')
+    f = open("bert/data/ind.{}.x".format(dataset), 'wb')
     pkl.dump(x, f)
     f.close()
 
-    f = open("data/ind.{}.y".format(dataset), 'wb')
+    f = open("bert/data/ind.{}.y".format(dataset), 'wb')
     pkl.dump(y, f)
     f.close()
 
-    f = open("data/ind.{}.tx".format(dataset), 'wb')
+    f = open("bert/data/ind.{}.tx".format(dataset), 'wb')
     pkl.dump(tx, f)
     f.close()
 
-    f = open("data/ind.{}.ty".format(dataset), 'wb')
+    f = open("bert/data/ind.{}.ty".format(dataset), 'wb')
     pkl.dump(ty, f)
     f.close()
 
-    f = open("data/ind.{}.allx".format(dataset), 'wb')
+    f = open("bert/data/ind.{}.allx".format(dataset), 'wb')
     pkl.dump(allx, f)
     f.close()
 
-    f = open("data/ind.{}.ally".format(dataset), 'wb')
+    f = open("bert/data/ind.{}.ally".format(dataset), 'wb')
     pkl.dump(ally, f)
     f.close()
 
-    f = open("data/ind.{}.adj".format(dataset), 'wb')
+    f = open("bert/data/ind.{}.adj".format(dataset), 'wb')
     pkl.dump(adj, f)
     f.close()
 

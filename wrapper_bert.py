@@ -1,5 +1,6 @@
 import pandas as pd
 import torch
+from huggingface_hub import hf_hub_download
 from bert.model.models import BertClassifier, DebertaClassifier
 from wrapper_helper_bert import build_graph, prepare_for_graph
 
@@ -50,7 +51,7 @@ class BertWrapper:
     @torch.no_grad()
     def predict_logits(self, input_data, batch_size: int = 64, max_length: int = 128):
             """
-            texts : iterable[str] | pd.Series
+            input_data : pandas dataframe (input_data needs to have column "text")
             returns: torch.FloatTensor (len(texts), num_labels)
             """
 
@@ -63,10 +64,12 @@ class BertWrapper:
             nb_word = nb_node - nb_train - nb_val - nb_test
             nb_class = y_train.shape[1]
 
-            # load detector with correct nb_class (calculated from data)
-            self.load_detector(self.ckpt_name, nb_class)
+            # # load detector with correct nb_class (calculated from data)
+            # self.load_detector(self.ckpt_name, nb_class)
 
-            texts = input_data["text"]
+            self.load_detector(self.ckpt_name, self.nb_class)
+
+            texts = input_data["text"].tolist()
             all_logits = []
 
             for i in range(0, len(texts), batch_size):
@@ -90,7 +93,12 @@ class BertWrapper:
 
 if __name__ == "__main__":
     # TODO checkpoint für bert erstellen
-    wrapper = BertWrapper("ckpt/bert.ckpt", "bert-base-uncased")
+    checkpoint_path = hf_hub_download(
+        repo_id="43shira43/my-checkpoint-collection",
+        filename="bert-base-uncased/checkpoint.pth",
+        repo_type="model"
+    )
+    wrapper = BertWrapper(checkpoint_path, "bert-base-uncased", nb_class=3)
     x_data = pd.read_json("testSeq.jsonl", orient='records', lines=True)
     logits = wrapper.predict_logits(x_data)
     print(logits)

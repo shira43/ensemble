@@ -79,13 +79,11 @@ def obtain_jsonl(data_df, data_type):
 
     if current_label == 'user':
         current_label = 'api'
-    # Append the last document
+
     append_document(formatted_data, current_text, prompt_len, current_label)
 
-    # Convert the result to JSON format
     jsonl_data = "\n".join(json.dumps(doc) for doc in formatted_data)
 
-    # write to jsonl file
     with open(data_type + '.jsonl', 'w') as f:
         f.write(jsonl_data)
         f.close()

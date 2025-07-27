@@ -154,6 +154,8 @@ class SeqXGPTWrapper:
 if __name__ == "__main__":
     wrapper = SeqXGPTWrapper("input", "out", "seqXGPT/dataset/coauthor/train.jsonl", "seqXGPT/dataset/coauthor/val.jsonl")
 
+
+    # TODO add column prompt_len = 0 to all data of df
     # TODO change to correct .jsonl so test works.
     x_data = pd.read_json("testSeq.jsonl", orient='records', lines=True)
     logits = wrapper.predict_logits(x_data)

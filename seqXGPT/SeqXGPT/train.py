@@ -383,9 +383,9 @@ if __name__ == "__main__":
     # }
 
     en_labels = {
-        'api': 0,
-        'user_and_api': 1,
-        'human': 2
+        'api': 1,
+        'user_and_api': 2,
+        'human': 0
     }
 
     # en_labels = {'AI':0, 'human':1}

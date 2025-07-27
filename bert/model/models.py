@@ -1,6 +1,6 @@
 import torch as th
 import torch.nn.functional as F
-from transformers import AutoModel, AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoModel, AutoTokenizer, AutoModelForSequenceClassification, BertForSequenceClassification
 from .torch_gcn import GCN
 from .torch_gat import GAT
 from transformers import AutoTokenizer, DebertaV2ForSequenceClassification
@@ -10,7 +10,8 @@ class BertClassifier(th.nn.Module):
         super(BertClassifier, self).__init__()
         self.nb_class = nb_class
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
-        self.bert_model = AutoModel.from_pretrained(pretrained_model)
+        self.bert_model = BertForSequenceClassification.from_pretrained(pretrained_model)
+        #self.bert_model = AutoModel.from_pretrained(pretrained_model)
         self.feat_dim = self.bert_model.config.hidden_size
         # self.feat_dim = list(self.bert_model.modules())[-2].out_features
         self.classifier = th.nn.Linear(self.feat_dim, nb_class)
