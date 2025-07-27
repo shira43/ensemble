@@ -11,8 +11,8 @@ from seqXGPT.SeqXGPT.dataloader import DataManager
 from seqXGPT.SeqXGPT.model import ModelWiseTransformerClassifier
 from wrapper_helper_seqxgpt import gen_features
 from seqXGPT.dataset.process_data import obtain_jsonl
-sys.path.append("seqXGPT/SeqXGPT")
-from seqXGPT.SeqXGPT.train import SupervisedTrainer
+#sys.path.append("seqXGPT/SeqXGPT")
+#from seqXGPT.SeqXGPT.train import SupervisedTrainer
 
 import torch
 
