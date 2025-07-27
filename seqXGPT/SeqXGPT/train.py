@@ -24,9 +24,6 @@ if project_path not in sys.path:
 from dataloader import DataManager
 from model import ModelWiseCNNClassifier, ModelWiseTransformerClassifier, TransformerOnlyClassifier
 
-sys.path.append("/seqXGPT")
-from seqXGPT import backend_model_info
-
 
 class SupervisedTrainer:
     def __init__(self, data, model, en_labels, id2label, args):
@@ -425,10 +422,10 @@ if __name__ == "__main__":
     if args.train_mode == 'contrastive_learning':
         print('-' * 32 + 'contrastive_learning' + '-' * 32)
         if args.model == 'CNN':
-            classifier = ModelWiseCNNClassifier(class_num=backend_model_info.en_class_num)
+            classifier = ModelWiseCNNClassifier(class_num=5) # this is backend_model_info.en_class_num
             ckpt_name = ''
         else:
-            classifier = ModelWiseTransformerClassifier(class_num=backend_model_info.en_class_num)
+            classifier = ModelWiseTransformerClassifier(class_num=5) # this is backend_model_info.en_class_num
             ckpt_name = ''
 
         trainer = SupervisedTrainer(data, classifier, loss_criterion = 'ContrastiveLoss')
@@ -438,13 +435,13 @@ if __name__ == "__main__":
     if args.train_mode == 'contrastive_classify':
         print('-' * 32 + 'contrastive_classify' + '-' * 32)
         if args.model == 'CNN':
-            classifier = ModelWiseCNNClassifier(class_num=backend_model_info.en_class_num)
+            classifier = ModelWiseCNNClassifier(class_num=5) # this is backend_model_info.en_class_num
             ckpt_name = ''
             saved_model = torch.load(ckpt_name)
             classifier.load_state_dict(saved_model.state_dict())
             ckpt_name = ''
         else:
-            classifier = ModelWiseTransformerClassifier(class_num=backend_model_info.en_class_num)
+            classifier = ModelWiseTransformerClassifier(class_num=5)  # this is backend_model_info.en_class_num
             ckpt_name = ''
             saved_model = torch.load(ckpt_name)
             classifier.load_state_dict(saved_model.state_dict())
