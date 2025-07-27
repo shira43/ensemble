@@ -1,4 +1,5 @@
 import argparse
+import logging
 import sys
 from argparse import Namespace
 
@@ -15,6 +16,14 @@ from seqXGPT.dataset.process_data import obtain_jsonl
 #from seqXGPT.SeqXGPT.train import SupervisedTrainer
 
 import torch
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 # bmes labels for en_labels (api, user_api and human)
 id2label = {0: 'B-api', 1: 'M-api', 2: 'E-api', 3: 'S-api', 4: 'B-user_and_api', 5: 'M-user_and_api', 6: 'E-user_and_api', 7: 'S-user_and_api', 8: 'B-human', 9: 'M-human', 10: 'E-human', 11: 'S-human'}
@@ -182,11 +191,14 @@ if __name__ == "__main__":
         test_df = data_df["test"].to_pandas()
 
         if args.dataset == 'coauthor-zeng':
+            logger.info("Generate train features now...")
             #generate train features
             train_jsonl = obtain_jsonl(final_train_df, 'datasets/seqXGPT/coauthor/train')
             train_output = "datasets/seqXGPT/coauthor/train_features.jsonl"
+            logger.info(" Starting gen_features now...")
             gen_features(train_jsonl, train_output)
 
+            logger.info("Generate test features now...")
             #generate test features
             test_jsonl = obtain_jsonl(test_df, 'coauthor/coauthor/test')
             test_output = "datasets/seqXGPT/coauthor/test_features.jsonl"
