@@ -210,6 +210,11 @@ if __name__ == "__main__":
 
 
         else:
+
+            # Rename columns:
+            final_train_df.rename(columns={"text": "sentence_text", "id": "session_id", "label_str": "sentence_source"}, inplace=True)
+            test_df.rename(columns={"text": "sentence_text", "id": "session_id", "label_str": "sentence_source"}, inplace=True)
+
             obtain_jsonl(final_train_df, 'datasets/seqXGPT/coauthor-extended/train')
             train_path = 'datasets/seqXGPT/coauthor-extended/train.jsonl'
             train_output = "datasets/seqXGPT/coauthor-extended/train_features.jsonl"
