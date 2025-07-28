@@ -157,6 +157,7 @@ if __name__ == "__main__":
         split: ds.filter(is_valid_label)
         for split, ds in dataset.items()
     })
+    filtered_dataset.rename_column("sentence_text", "text")
 
     logging.info("Running radar...")
     output = run_radar(filtered_dataset, DEVICE="cuda", finetune=True, three_classes=True)
