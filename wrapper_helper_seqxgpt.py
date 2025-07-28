@@ -43,6 +43,9 @@ def gen_features(input_file, output_file):
     input_file: str -> name of input file path with the text data (format of jsonl {text, prompt_len, label})
     output_file: str -> name of output file"""
 
+    # instead of call to inference server
+    sniffer = LocalBackendSniffer()
+
     en_labels = {
         'api': 1,
         'user_and_api': 2,
@@ -70,8 +73,6 @@ def gen_features(input_file, output_file):
                 continue
             label_int = en_labels[label]
 
-            # instead of call to inference server
-            sniffer = LocalBackendSniffer()
             loss, begin_word_idx, ll_tokens = sniffer.get_features(line)
 
             losses.append(loss)
