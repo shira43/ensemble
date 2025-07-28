@@ -1,6 +1,7 @@
 import logging
 
 from datasets import load_dataset, Value, DatasetDict
+from sklearn.metrics import cohen_kappa_score
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, AdamW, AutoModel, AutoConfig
 from torch.utils.data import DataLoader, Dataset
 import torch
@@ -110,6 +111,7 @@ def evaluate_model(model, tokenizer, data, DEVICE, no_auc=False):
         'precision_test': precision_test,
         'recall_test': recall_test,
         'f1_test': f1_test,
+        'kappa': cohen_kappa_score(labels, preds),
         'auc_test': auc_test,
     }
     print(results_dict)
