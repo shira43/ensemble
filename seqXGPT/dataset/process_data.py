@@ -40,6 +40,11 @@ def obtain_jsonl(data_df, data_type):
             current_session = entry["session_id"]
             current_text = entry["sentence_text"]
             current_label = entry["sentence_source"]
+
+            print(entry)
+            print("sentence_text type:", type(entry["sentence_text"]))
+            print("sentence_source type:", type(entry["sentence_source"]))
+
             prompt_len = len(current_text) if current_label == "user" else 0
         else:
             if current_label != entry["sentence_source"]:
