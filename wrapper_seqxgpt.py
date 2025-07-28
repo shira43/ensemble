@@ -182,7 +182,7 @@ if __name__ == "__main__":
                 data_df[split] = data_df[split].rename_columns({
                     "text": "sentence_text",
                     "id": "session_id",
-                    "source": "sentence_source", })
+                    "label_str": "sentence_source", })
 
         train_df = data_df["train"].to_pandas()
         val_df = data_df["validation"].to_pandas()
@@ -211,9 +211,9 @@ if __name__ == "__main__":
 
         else:
 
-            # Rename columns:
-            final_train_df.rename(columns={"text": "sentence_text", "id": "session_id", "label_str": "sentence_source"}, inplace=True)
-            test_df.rename(columns={"text": "sentence_text", "id": "session_id", "label_str": "sentence_source"}, inplace=True)
+            # # Rename columns:
+            # final_train_df.rename(columns={"text": "sentence_text", "id": "session_id", "label_str": "sentence_source"}, inplace=True)
+            # test_df.rename(columns={"text": "sentence_text", "id": "session_id", "label_str": "sentence_source"}, inplace=True)
 
             obtain_jsonl(final_train_df, 'datasets/seqXGPT/coauthor-extended/train')
             train_path = 'datasets/seqXGPT/coauthor-extended/train.jsonl'
