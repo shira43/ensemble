@@ -18,8 +18,9 @@ from ignite.engine import Engine, Events
 from helpers import get_loaders, parse_args, CohenKappa, training_step, evaluation_step
 
 
-def collate_fn(batch):
-    return tokenizer.pad(batch, return_tensors="pt")
+# def collate_fn(batch):
+#     return tokenizer.pad(batch, return_tensors="pt")
+#
 
 
 def tokenization(example):
@@ -171,6 +172,8 @@ if __name__ == "__main__":
     logger.info("Initializing Tokenizer adn Dataset.")
 
     tokenizer = AutoTokenizer.from_pretrained(bert_init)
+    collate_fn = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8)
+
 
     dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
     dataset = dataset.cast_column("label", Value("int64"))
