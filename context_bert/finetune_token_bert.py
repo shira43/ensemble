@@ -4,7 +4,7 @@ from functools import partial
 from ignite.contrib.handlers import ProgressBar
 from ignite.metrics import Loss, Accuracy
 from transformers import AutoTokenizer, AdamW, BertForTokenClassification, DataCollatorForTokenClassification
-from datasets import load_dataset, Dataset
+from datasets import load_dataset, Dataset, Value
 import torch
 from torch.nn.functional import cross_entropy
 from ignite.metrics import Precision, Recall, Fbeta
@@ -211,6 +211,7 @@ if __name__ == "__main__":
     data_collator = DataCollatorForTokenClassification(tokenizer)
 
     dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
+    dataset = dataset.cast_column("label", Value("int64"))
 
     train, val, test = filter_and_tokenize(dataset, max_length)
     logger.info(len(train))
