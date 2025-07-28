@@ -152,13 +152,17 @@ if __name__ == "__main__":
         return example["label"] in [0, 1, 2]
 
     dataset = load_dataset("43shira43/coauthor-zeng")
-    dataset = dataset.cast_column("label", Value("int64"))
+
     filtered_dataset = DatasetDict({
         split: ds.filter(is_valid_label)
         for split, ds in dataset.items()
     })
-    filtered_dataset.rename_column("sentence_text", "text")
-
+    for split in filtered_dataset:
+        filtered_dataset[split] = (
+            filtered_dataset[split]
+            .cast_column("label", Value("int64"))
+            .rename_column("sentence_text", "text")
+        )
     logging.info("Running radar...")
     output = run_radar(filtered_dataset, DEVICE="cuda", finetune=True, three_classes=True)
     logging.info(f"Running radar is completed.")
