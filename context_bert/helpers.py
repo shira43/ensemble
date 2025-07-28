@@ -199,7 +199,7 @@ def parse_args():
     parser.add_argument('--is_save_model', type=str, default='save', choices=['save', 'no_save'],
                         help='input save or no_save')
     parser.add_argument('--dataset', default='coauthor-zeng',
-                        choices=["pasted-base", "coauthor-base", "coauthor-extended-base", "coauthor-zeng"])
+                        choices=["pasted-base", "coauthor-base", "coauthor-extended-np", "coauthor-zeng"])
     parser.add_argument('--epoch_sample_num', type=int, default=None)
 
 
