@@ -64,6 +64,10 @@ def gen_features(input_file, output_file):
             losses = []
             begin_idx_list = []
             ll_tokens_list = []
+
+            if label not in en_labels:
+                print(f"Skipping unknown label: {label}")
+                continue
             label_int = en_labels[label]
 
             # instead of call to inference server
