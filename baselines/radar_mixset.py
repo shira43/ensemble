@@ -163,7 +163,7 @@ if __name__ == "__main__":
         filtered_dataset[split] = (
             filtered_dataset[split]
             .cast_column("label", Value("int64"))
-            .rename_column("sentence_text", "text")
+            # .rename_column("sentence_text", "text")       #only for coauthor-zeng
         )
     logging.info("Running radar...")
     output = run_radar(filtered_dataset, DEVICE="cuda", finetune=True, three_classes=True)
