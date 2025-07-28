@@ -24,8 +24,17 @@ def collate_fn(batch):
 
 def tokenization(example):
     text_col = 'sentence_text' if 'sentence_text' in example else 'text'
-    return {"tokens": tokenizer(example[text_col],
-                                add_special_tokens=False)["input_ids"]}
+
+
+    return {"tokens": tokenizer(
+        example[text_col],
+        add_special_tokens=False,
+        truncation=True,
+        max_length=512
+    )["input_ids"]}
+
+    # return {"tokens": tokenizer(example[text_col],
+    #                             add_special_tokens=False)["input_ids"]}
 
 
 
@@ -155,6 +164,7 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(bert_init)
 
     dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
+    dataset = dataset.map(lambda x: {"label": int(x["label"])})
 
     train, val, test = filter_and_tokenize(dataset, max_context)
 
