@@ -164,7 +164,7 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(bert_init)
 
     dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
-    dataset = dataset.map(lambda x: {"label": int(x["label"])})
+    dataset = dataset.cast_column("label", Value("int64"))
 
     train, val, test = filter_and_tokenize(dataset, max_context)
 
