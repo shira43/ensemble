@@ -15,7 +15,7 @@ class LocalBackendSniffer:
     but runs everything locally – no HTTP, no mosec.
     """
 
-    def __init__(self, model_name: str = "gpt2", device: str = "cuda" if torch.cuda.is_available() else "cpu"):
+    def __init__(self, model_name: str = "gpt2", device: str = "cuda:1" if torch.cuda.is_available() else "cpu"):
         # load tokenizer + model
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
