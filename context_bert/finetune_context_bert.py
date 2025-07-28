@@ -92,7 +92,16 @@ def build_context_dataset(ds,
             max_context_sentences=max_context_sentences,
             context_type=context_type,
         )
-        feats = tokenizer.prepare_for_model(ctx, tgt, add_special_tokens=True)
+
+        feats = tokenizer.prepare_for_model(
+            ctx,
+            tgt,
+            add_special_tokens=True,
+            truncation="only_first",  # truncate context in case its over 512
+            max_length=tokenizer.model_max_length,
+            padding=False
+        )
+        # feats = tokenizer.prepare_for_model(ctx, tgt, add_special_tokens=True)
         feats["labels"] = labels[idx]
         rows.append(feats)
     return Dataset.from_list(rows)
