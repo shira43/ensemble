@@ -153,7 +153,7 @@ if __name__ == "__main__":
     def is_valid_label(example):
         return example["label"] in [0, 1, 2]
 
-    dataset = load_dataset("43shira43/coauthor-zeng")
+    dataset = load_dataset("43shira43/coauthor-extended-np")
 
     filtered_dataset = DatasetDict({
         split: ds.filter(is_valid_label)
