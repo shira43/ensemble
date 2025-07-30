@@ -256,8 +256,13 @@ class BBPETokenizerPPLCalc(object):
         return ll_tokens
 
     def get_begin_word_idx(self, input_ids, bbs_to_words):
-        input_ids = input_ids.squeeze()
-        begin_token = self.base_tokenizer._convert_id_to_token(input_ids[0])
+        # input_ids = input_ids.squeeze()
+        # begin_token = self.base_tokenizer._convert_id_to_token(input_ids[0])
+
+        input_ids = input_ids.view(-1)
+        first_id = input_ids[0].item()
+        begin_token = self.base_tokenizer._convert_id_to_token(first_id)
+
         byte_list = [self.byte_decoder[c] for c in begin_token]
         begin_word_idx = bbs_to_words[len(byte_list) - 1] + 1
         return begin_word_idx
