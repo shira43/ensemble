@@ -198,10 +198,16 @@ class BBPETokenizerPPLCalc(object):
         :param labels: token ids.
         :return: sentence ppl, list of subtoken ppl.
         """
+
         # lm_logits = outputs.logits.squeeze()  # seq-len, V
         lm_logits = outputs.logits
         shift_logits = lm_logits[..., :-1, :].contiguous()
         shift_labels = labels[..., 1:].contiguous()
+
+        shift_logits = shift_logits.view(-1, shift_logits.size(-1))  # [N, V]
+        shift_labels = shift_labels.view(-1)  # [N]
+
+
         loss_func = torch.nn.CrossEntropyLoss(reduction='none')
         ll = loss_func(shift_logits, shift_labels.view(-1))
         loss = ll.mean().item()
@@ -300,6 +306,12 @@ class CharLevelTokenizerPPLCalc(object):
         lm_logits = outputs.logits
         shift_logits = lm_logits[..., :-1, :].contiguous()
         shift_labels = labels[..., 1:].contiguous()
+
+
+        shift_logits = shift_logits.view(-1, shift_logits.size(-1))  # [N, V]
+        shift_labels = shift_labels.view(-1)  # [N]
+
+
         loss_func = torch.nn.CrossEntropyLoss(reduction='none')
         ll = loss_func(shift_logits, shift_labels.view(-1))
         loss = ll.mean().item()
@@ -410,6 +422,12 @@ class SPLlamaTokenizerPPLCalc(object):
         lm_logits = outputs.logits
         shift_logits = lm_logits[..., :-1, :].contiguous()
         shift_labels = labels[..., 1:].contiguous()
+
+
+        shift_logits = shift_logits.view(-1, shift_logits.size(-1))  # [N, V]
+        shift_labels = shift_labels.view(-1)  # [N]
+
+
         loss_func = torch.nn.CrossEntropyLoss(reduction='none')
         ll = loss_func(shift_logits, shift_labels.view(-1))
         loss = ll.mean().item()
@@ -512,6 +530,12 @@ class SPChatGLMTokenizerPPLCalc(object):
         lm_logits = outputs.logits
         shift_logits = lm_logits[..., :-1, :].contiguous()
         shift_labels = labels[..., 1:].contiguous()
+
+
+        shift_logits = shift_logits.view(-1, shift_logits.size(-1))  # [N, V]
+        shift_labels = shift_labels.view(-1)  # [N]
+
+
         loss_func = torch.nn.CrossEntropyLoss(reduction='none')
         ll = loss_func(shift_logits, shift_labels.view(-1))
         loss = ll.mean().item()
