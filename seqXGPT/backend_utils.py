@@ -218,7 +218,9 @@ class BBPETokenizerPPLCalc(object):
         """
         :return bbs_ll: list of bbpe_byte's ll.
         """
-        input_ids = input_ids.squeeze()
+        #input_ids = input_ids.squeeze()
+        input_ids = input_ids.view(-1)
+
         tokenized_tokens = [
             self.base_tokenizer._convert_id_to_token(input_id)
             for input_id in input_ids
