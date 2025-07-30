@@ -296,7 +296,8 @@ class CharLevelTokenizerPPLCalc(object):
         :param labels: token ids.
         :return: sentence ppl, list of subtoken ppl.
         """
-        lm_logits = outputs.logits.squeeze()  # seq-len, V
+        # lm_logits = outputs.logits.squeeze()  # seq-len, V
+        lm_logits = outputs.logits
         shift_logits = lm_logits[..., :-1, :].contiguous()
         shift_labels = labels[..., 1:].contiguous()
         loss_func = torch.nn.CrossEntropyLoss(reduction='none')
@@ -405,7 +406,8 @@ class SPLlamaTokenizerPPLCalc(object):
         :param labels: token ids.
         :return: sentence ppl, list of subtoken ppl.
         """
-        lm_logits = outputs.logits.squeeze()  # seq-len, V
+        #lm_logits = outputs.logits.squeeze()  # seq-len, V
+        lm_logits = outputs.logits
         shift_logits = lm_logits[..., :-1, :].contiguous()
         shift_labels = labels[..., 1:].contiguous()
         loss_func = torch.nn.CrossEntropyLoss(reduction='none')
@@ -506,7 +508,8 @@ class SPChatGLMTokenizerPPLCalc(object):
         :param labels: token ids.
         :return: sentence ppl, list of subtoken ppl.
         """
-        lm_logits = outputs.logits.squeeze()  # seq-len, V
+        #lm_logits = outputs.logits.squeeze()  # seq-len, V
+        lm_logits = outputs.logits
         shift_logits = lm_logits[..., :-1, :].contiguous()
         shift_labels = labels[..., 1:].contiguous()
         loss_func = torch.nn.CrossEntropyLoss(reduction='none')
