@@ -263,8 +263,7 @@ class BBPETokenizerPPLCalc(object):
         return begin_word_idx
 
     def forward_calc_ppl(self, text):
-        tokenized = self.base_tokenizer(text,
-                                        return_tensors="pt").to(self.device)
+        tokenized = self.base_tokenizer(text, truncation=True, max_length=1024, return_tensors="pt").to(self.device)
         input_ids = tokenized.input_ids
         labels = tokenized.input_ids
         input_ids = input_ids[:, :1024, ]
