@@ -12,7 +12,7 @@ import numpy as np
 import os
 
 from datetime import datetime
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
 import argparse, shutil, logging
 from torch.optim import lr_scheduler
 from model.models import BertClassifier, DebertaClassifier
@@ -434,6 +434,21 @@ if __name__ == '__main__':
         y_test_true_results = [labels_dic[true] for true in y_test_true_results]
         # Create a DataFrame
         prediction_data = pd.DataFrame({'label_': y_test_true_results,'label_preds': y_test_pred_results})
+
+        # confusion matrix
+        def _format_cm(cm, labels):
+            # labels: list of label ids in display order
+            import io
+            import pandas as pd
+            df = pd.DataFrame(cm, index=[f"true_{l}" for l in labels], columns=[f"pred_{l}" for l in labels])
+            buf = io.StringIO()
+            df.to_string(buf)
+            return buf.getvalue(), df
+
+        unique_labels = sorted(set(labels_dic.values()))
+        cm = confusion_matrix(y_test_true_results, y_test_pred_results, labels=unique_labels)
+        cm_str, cm_df = _format_cm(cm, unique_labels)
+        logger.info("\nConfusion Matrix (test):\n" + cm_str)
 
         if log_training_results.best_val_kappa == 0 or log_training_results.best_val_kappa < val_kappa:
             log_training_results.best_val_kappa = val_kappa
