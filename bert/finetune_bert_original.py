@@ -204,7 +204,7 @@ if __name__ == '__main__':
     logger.setLevel(logging.INFO)
 
     cpu = th.device('cpu')
-    gpu = th.device('cuda:0')
+    gpu = th.device('cuda:1')
 
     logger.info('arguments:')
     logger.info(str(args))
