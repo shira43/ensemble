@@ -226,6 +226,28 @@ if __name__ == "__main__":
     for name, metric in metrics.items():
         metric.attach(evaluator, name)
 
+    # storage for preds and labels
+    y_true_storage = []
+    y_pred_storage = []
+
+
+    @evaluator.on(Events.STARTED)
+    def reset_storage(_):
+        y_true_storage.clear()
+        y_pred_storage.clear()
+
+
+    @evaluator.on(Events.ITERATION_COMPLETED)
+    def collect_preds(engine):
+        y_pred, y_true = engine.state.output["y_pred"], engine.state.output["y_true"]
+        if isinstance(y_pred, torch.Tensor):
+            y_pred = y_pred.argmax(dim=-1).detach().cpu().numpy()
+        if isinstance(y_true, torch.Tensor):
+            y_true = y_true.detach().cpu().numpy()
+
+        y_pred_storage.extend(y_pred)
+        y_true_storage.extend(y_true)
+
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(trainer):
@@ -258,6 +280,9 @@ if __name__ == "__main__":
             f"loss={test_metrics['loss']:.4f} prec={test_metrics['precision']:.4f} recall={test_metrics['recall']:.4f} "
             f"f1={test_metrics['f1']:.4f} kappa={test_metrics['kappa']:.4f}"
         )
+
+        cm = confusion_matrix(y_true_storage, y_pred_storage)
+        logger.info(f"[Epoch {trainer.state.epoch}] Test Confusion Matrix:\n{np.array_str(cm)}")
 
         # # Save best checkpoint (tracked via val κappa)
         # if not hasattr(log_training_results, "best_val_kappa"):
