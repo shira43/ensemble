@@ -3,7 +3,7 @@ import logging
 from typing import Optional, Literal
 from ignite.contrib.handlers import ProgressBar
 from ignite.metrics import Loss, Accuracy
-from sklearn.metrics import cohen_kappa_score
+from sklearn.metrics import cohen_kappa_score, confusion_matrix
 from functools import partial
 from transformers import AutoTokenizer, AdamW
 from datasets import load_dataset, Dataset, Value
@@ -226,28 +226,6 @@ if __name__ == "__main__":
     for name, metric in metrics.items():
         metric.attach(evaluator, name)
 
-    # storage for preds and labels
-    y_true_storage = []
-    y_pred_storage = []
-
-
-    @evaluator.on(Events.STARTED)
-    def reset_storage(_):
-        y_true_storage.clear()
-        y_pred_storage.clear()
-
-
-    @evaluator.on(Events.ITERATION_COMPLETED)
-    def collect_preds(engine):
-        y_pred, y_true = engine.state.output["y_pred"], engine.state.output["y_true"]
-        if isinstance(y_pred, torch.Tensor):
-            y_pred = y_pred.argmax(dim=-1).detach().cpu().numpy()
-        if isinstance(y_true, torch.Tensor):
-            y_true = y_true.detach().cpu().numpy()
-
-        y_pred_storage.extend(y_pred)
-        y_true_storage.extend(y_true)
-
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(trainer):
@@ -281,7 +259,19 @@ if __name__ == "__main__":
             f"f1={test_metrics['f1']:.4f} kappa={test_metrics['kappa']:.4f}"
         )
 
-        cm = confusion_matrix(y_true_storage, y_pred_storage)
+        # get confusion matrix
+        y_true = []
+        y_pred = []
+        model.eval()
+        with torch.no_grad():
+            for batch in test_loader:
+                batch = {k: v.to(gpu) for k, v in batch.items()}
+                outputs = model(**{k: v for k, v in batch.items() if k != "labels"})
+                preds = torch.argmax(outputs.logits, dim=-1)
+                y_true.extend(batch["labels"].cpu().numpy())
+                y_pred.extend(preds.cpu().numpy())
+
+        cm = confusion_matrix(y_true, y_pred)
         logger.info(f"[Epoch {trainer.state.epoch}] Test Confusion Matrix:\n{np.array_str(cm)}")
 
         # # Save best checkpoint (tracked via val κappa)
