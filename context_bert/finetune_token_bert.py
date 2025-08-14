@@ -1,6 +1,6 @@
 import logging
 from functools import partial
-
+import numpy as np
 from ignite.contrib.handlers import ProgressBar
 from ignite.metrics import Loss, Accuracy
 from sklearn.metrics import confusion_matrix
