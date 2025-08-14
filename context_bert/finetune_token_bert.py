@@ -1,9 +1,7 @@
 import logging
 from functools import partial
-import numpy as np
 from ignite.contrib.handlers import ProgressBar
 from ignite.metrics import Loss, Accuracy
-from sklearn.metrics import confusion_matrix
 from transformers import AutoTokenizer, AdamW, BertForTokenClassification, DataCollatorForTokenClassification
 from datasets import load_dataset, Dataset, Value
 import torch
@@ -11,6 +9,8 @@ from torch.nn.functional import cross_entropy
 from ignite.metrics import Precision, Recall, Fbeta
 from ignite.engine import Engine, Events
 from helpers import get_loaders, parse_args, CohenKappa, training_step, evaluation_step
+from sklearn.metrics import confusion_matrix
+import numpy as np
 
 # Mix -> "user_and_api" und "O" ist Outside -> "user".
 id2label = {
@@ -276,10 +276,6 @@ if __name__ == "__main__":
     for name, metric in metrics.items():
         metric.attach(evaluator, name)
 
-    from sklearn.metrics import confusion_matrix
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    import numpy as np
 
     # Class names (match your id2label values for collapsed 3-class evaluation)
     class_names = ["Human", "AI", "Mix"]
@@ -319,30 +315,6 @@ if __name__ == "__main__":
         return cm
 
 
-    def plot_conf_matrix(cm, class_names, filename="conf_matrix.png"):
-        row_sums = cm.sum(axis=1, keepdims=True)
-        cm_normalized = cm / row_sums
-
-        # Annotate with count and percentage
-        annot = np.empty_like(cm, dtype=object)
-        for i in range(cm.shape[0]):
-            for j in range(cm.shape[1]):
-                count = cm[i, j]
-                percent = cm_normalized[i, j] * 100
-                annot[i, j] = f'{count}\n({percent:.1f}%)'
-
-        plt.figure(figsize=(8, 6))
-        sns.heatmap(cm_normalized, annot=annot, fmt='', cmap='Blues',
-                    xticklabels=class_names, yticklabels=class_names,
-                    cbar_kws={'label': 'Proportion'})
-
-        plt.xlabel('Predicted Label')
-        plt.ylabel('True Label')
-        plt.title('Confusion Matrix (Normalized by Row)')
-        plt.tight_layout()
-        plt.savefig(filename, dpi=300, bbox_inches='tight')
-        plt.close()
-
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(trainer):
@@ -377,8 +349,6 @@ if __name__ == "__main__":
         )
 
         cm = compute_conf_matrix()
-        plot_conf_matrix(cm, class_names)
-
 
     logger.info("Starting trainer now...")
     trainer.run(train_loader, max_epochs=nb_epochs)
