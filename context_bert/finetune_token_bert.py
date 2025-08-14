@@ -276,6 +276,73 @@ if __name__ == "__main__":
     for name, metric in metrics.items():
         metric.attach(evaluator, name)
 
+    from sklearn.metrics import confusion_matrix
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import numpy as np
+
+    # Class names (match your id2label values for collapsed 3-class evaluation)
+    class_names = ["Human", "AI", "Mix"]
+
+
+    def compute_conf_matrix():
+        model.eval()
+        y_true_all = []
+        y_pred_all = []
+
+        with torch.no_grad():
+            for batch in test_loader:
+                input_ids = batch['input_ids'].to(gpu)
+                attention_mask = batch['attention_mask'].to(gpu)
+                labels = batch['labels'].to(gpu)
+
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                logits = outputs.logits  # (B, S, C)
+                preds = torch.argmax(logits, dim=-1)
+
+                mask = (labels >= 0) & (labels < len(id2label))  # valid tokens
+                y_true_all.extend(labels[mask].cpu().numpy())
+                y_pred_all.extend(preds[mask].cpu().numpy())
+
+        # Collapsing from 5 to 3 classes: O -> 0, B-API/I-API -> 1, B-MIX/I-MIX -> 2
+        def collapse(y):
+            y = np.array(y)
+            y_collapsed = np.zeros_like(y)
+            y_collapsed[(y == 1) | (y == 2)] = 1  # AI
+            y_collapsed[(y == 3) | (y == 4)] = 2  # MIX
+            return y_collapsed
+
+        y_true_collapsed = collapse(y_true_all)
+        y_pred_collapsed = collapse(y_pred_all)
+
+        cm = confusion_matrix(y_true_collapsed, y_pred_collapsed)
+        return cm
+
+
+    def plot_conf_matrix(cm, class_names, filename="conf_matrix.png"):
+        row_sums = cm.sum(axis=1, keepdims=True)
+        cm_normalized = cm / row_sums
+
+        # Annotate with count and percentage
+        annot = np.empty_like(cm, dtype=object)
+        for i in range(cm.shape[0]):
+            for j in range(cm.shape[1]):
+                count = cm[i, j]
+                percent = cm_normalized[i, j] * 100
+                annot[i, j] = f'{count}\n({percent:.1f}%)'
+
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(cm_normalized, annot=annot, fmt='', cmap='Blues',
+                    xticklabels=class_names, yticklabels=class_names,
+                    cbar_kws={'label': 'Proportion'})
+
+        plt.xlabel('Predicted Label')
+        plt.ylabel('True Label')
+        plt.title('Confusion Matrix (Normalized by Row)')
+        plt.tight_layout()
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        plt.close()
+
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(trainer):
@@ -309,20 +376,8 @@ if __name__ == "__main__":
             f"f1={test_metrics['f1']:.4f} kappa={test_metrics['kappa']:.4f}"
         )
 
-        # get confusion matrix
-        y_true = []
-        y_pred = []
-        model.eval()
-        with torch.no_grad():
-            for batch in test_loader:
-                batch = {k: v.to(gpu) for k, v in batch.items()}
-                outputs = model(**{k: v for k, v in batch.items() if k != "labels"})
-                preds = torch.argmax(outputs.logits, dim=-1)
-                y_true.extend(batch["labels"].cpu().numpy())
-                y_pred.extend(preds.cpu().numpy())
-
-        cm = confusion_matrix(y_true, y_pred)
-        logger.info(f"[Epoch {trainer.state.epoch}] Test Confusion Matrix:\n{np.array_str(cm)}")
+        cm = compute_conf_matrix()
+        plot_conf_matrix(cm, class_names)
 
 
     logger.info("Starting trainer now...")
