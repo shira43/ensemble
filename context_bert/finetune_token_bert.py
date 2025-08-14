@@ -350,5 +350,8 @@ if __name__ == "__main__":
 
         cm = compute_conf_matrix()
 
+        logger.info("Confusion Matrix (collapsed to Human/AI/Mix):")
+        logger.info("\n" + "\n".join(["\t".join(map(str, row)) for row in cm]))
+
     logger.info("Starting trainer now...")
     trainer.run(train_loader, max_epochs=nb_epochs)
