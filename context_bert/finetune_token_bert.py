@@ -3,6 +3,7 @@ from functools import partial
 
 from ignite.contrib.handlers import ProgressBar
 from ignite.metrics import Loss, Accuracy
+from sklearn.metrics import confusion_matrix
 from transformers import AutoTokenizer, AdamW, BertForTokenClassification, DataCollatorForTokenClassification
 from datasets import load_dataset, Dataset, Value
 import torch
@@ -307,6 +308,21 @@ if __name__ == "__main__":
             f"loss={test_metrics['loss']:.4f} prec={test_metrics['precision']:.4f} recall={test_metrics['recall']:.4f} "
             f"f1={test_metrics['f1']:.4f} kappa={test_metrics['kappa']:.4f}"
         )
+
+        # get confusion matrix
+        y_true = []
+        y_pred = []
+        model.eval()
+        with torch.no_grad():
+            for batch in test_loader:
+                batch = {k: v.to(gpu) for k, v in batch.items()}
+                outputs = model(**{k: v for k, v in batch.items() if k != "labels"})
+                preds = torch.argmax(outputs.logits, dim=-1)
+                y_true.extend(batch["labels"].cpu().numpy())
+                y_pred.extend(preds.cpu().numpy())
+
+        cm = confusion_matrix(y_true, y_pred)
+        logger.info(f"[Epoch {trainer.state.epoch}] Test Confusion Matrix:\n{np.array_str(cm)}")
 
 
     logger.info("Starting trainer now...")
