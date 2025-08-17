@@ -380,24 +380,49 @@ if __name__ == "__main__":
 
     # ─── after training finishes ───────────────────────────────────────────────────
     logger.info("Further Model Evaluation after training has finished.")
-    model.eval()
-    model.bert.config.output_attentions = True  # ask BERT to return attentions
 
-    sample = next(iter(test_loader))  # one random batch
+    model.eval()
+    sample = next(iter(test_loader))
     sample = {k: v.to(gpu) for k, v in sample.items() if k in ("input_ids", "attention_mask", "token_type_ids")}
 
-    with torch.no_grad():
-        # run *raw* BERT to get attention maps
-        outputs = model.bert(**sample, output_attentions=True, return_dict=True)
-        last_layer_attn = outputs.attentions[-1]  # (B, heads, L, L)
+    # pick base model generically
+    base = getattr(model, "bert", None) or getattr(model, "roberta", None) or getattr(model, "deberta",
+                                                                                      None) or model.base_model
 
-    # Inspect or visualise e.g. CLS-to-tokens attention of head-0
-    # For a quick print you might do:
-    cls_attn = last_layer_attn[0, 0, 0]  # tokens that CLS attends to
+    with torch.no_grad():
+        base_outputs = base(
+            input_ids=sample["input_ids"],
+            attention_mask=sample.get("attention_mask"),
+            token_type_ids=sample.get("token_type_ids"),
+            output_attentions=True,
+            return_dict=True,
+        )
+    attn = base_outputs.attentions[-1]
+
     tokens = tokenizer.convert_ids_to_tokens(sample["input_ids"][0])
-    for tok, score, ttype in zip(tokens, cls_attn.cpu().tolist(), sample["token_type_ids"][0].tolist()):
-        print(f"{tok:>10}  seg={ttype}  attn={score:.3f}")
-        logger.info(f"{tok:>10}  seg={ttype}  attn={score:.3f}")
+    tt = sample.get("token_type_ids")
+    for i, tok in enumerate(tokens):
+        seg = int(tt[0, i].item()) if tt is not None else -1  # or None
+        logger.info(f"{tok:>10}  seg={seg}  attn={attn[0, 0, 0, i].item():.3f}")
+
+    # model.eval()
+    # model.bert.config.output_attentions = True  # ask BERT to return attentions
+    #
+    # sample = next(iter(test_loader))  # one random batch
+    # sample = {k: v.to(gpu) for k, v in sample.items() if k in ("input_ids", "attention_mask", "token_type_ids")}
+    #
+    # with torch.no_grad():
+    #     # run *raw* BERT to get attention maps
+    #     outputs = model.bert(**sample, output_attentions=True, return_dict=True)
+    #     last_layer_attn = outputs.attentions[-1]  # (B, heads, L, L)
+    #
+    # # Inspect or visualise e.g. CLS-to-tokens attention of head-0
+    # # For a quick print you might do:
+    # cls_attn = last_layer_attn[0, 0, 0]  # tokens that CLS attends to
+    # tokens = tokenizer.convert_ids_to_tokens(sample["input_ids"][0])
+    # for tok, score, ttype in zip(tokens, cls_attn.cpu().tolist(), sample["token_type_ids"][0].tolist()):
+    #     print(f"{tok:>10}  seg={ttype}  attn={score:.3f}")
+    #     logger.info(f"{tok:>10}  seg={ttype}  attn={score:.3f}")
 
     # print("Starting Training loop")
     # trainer = Engine(training_step)
