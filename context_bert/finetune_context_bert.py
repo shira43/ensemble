@@ -5,7 +5,7 @@ from ignite.contrib.handlers import ProgressBar
 from ignite.metrics import Loss, Accuracy
 from sklearn.metrics import cohen_kappa_score, confusion_matrix
 from functools import partial
-from transformers import AutoTokenizer, AdamW
+from transformers import AutoTokenizer, AdamW, AutoModelForSequenceClassification
 from datasets import load_dataset, Dataset, Value
 from torch.utils.data import DataLoader, WeightedRandomSampler
 import torch
@@ -108,6 +108,13 @@ def build_context_dataset(ds,
     return Dataset.from_list(rows)
 
 
+def set_pt_format(ds):
+    cols = ["input_ids", "attention_mask", "labels"]
+    if "token_type_ids" in ds.column_names:  # present for BERT etc., absent for RoBERTa/XLM-R
+        cols.append("token_type_ids")
+    ds.set_format(type="torch", columns=cols)
+
+
 def filter_and_tokenize(data, max_context_sentences=2):
     """
 
@@ -129,9 +136,9 @@ def filter_and_tokenize(data, max_context_sentences=2):
     test_dataset = build_context_dataset(test_set, max_context_sentences, "prefix")
 
     # turn to torch tensors for dataloader
-    cols = ["input_ids", "token_type_ids", "attention_mask", "labels"]
-    for ds in (train_dataset, val_dataset, test_dataset):
-        ds.set_format(type="torch", columns=cols)
+    set_pt_format(train_dataset)
+    set_pt_format(val_dataset)
+    set_pt_format(test_dataset)
 
     return train_dataset, val_dataset, test_dataset
 
@@ -157,6 +164,7 @@ if __name__ == "__main__":
     nb_epochs = args.nb_epochs
     bert_lr = args.bert_lr
     use_weighted_sampler = args.use_weighted_sampler
+    use_multilingual = args.multilingual
     max_context = args.max_context_sentences
     # is_save_model = args.is_save_model
     dataset = args.dataset
@@ -169,35 +177,69 @@ if __name__ == "__main__":
     # else:
     #     ckpt_dir = checkpoint_dir
 
+
+
     logger.info("Initializing Tokenizer adn Dataset.")
 
-    tokenizer = AutoTokenizer.from_pretrained(bert_init)
-    collate_fn = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8)
+    # If we want to test German OOD dataset performance -> multilingual model
+    if use_multilingual:
+        tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
+        collate_fn = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8)
+
+        dataset = load_dataset(f"43shira43/{dataset}", cache_dir="/tmp/hf_cache")
+        dataset = dataset.cast_column("label", Value("int64"))
+
+        train, val, test = filter_and_tokenize(dataset, max_context)
+        logger.info(len(train))
+
+        german = load_dataset("43shira43/coauthor-german", split="test")
+        # filter out label -1 and add column tokens which stores input_ids of tokenizer to test set
+        test_set = german.filter(lambda example: example["label"] in [0, 1, 2]).map(tokenization, batched=True)
+        test_dataset = build_context_dataset(test_set, max_context)
+        set_pt_format(test_dataset)
+        test = test_dataset
+
+        dataloaders = get_loaders(train, val, test, batch_size, use_weighted_sampler, epoch_sample_num, collate_fn)
+        logger.info("Successfully loaded all Dataloaders.")
+
+        train_loader = dataloaders["train"]
+        val_loader = dataloaders["val"]
+        test_loader = dataloaders["test"]
+        train_eval_loader = dataloaders["train_eval"]
+
+        model = AutoModelForSequenceClassification.from_pretrained(
+            "xlm-roberta-base",
+            num_labels=3,
+            problem_type="single_label_classification"
+        )
+
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(bert_init)
+        collate_fn = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8)
 
 
-    dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
-    dataset = dataset.cast_column("label", Value("int64"))
+        dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
+        dataset = dataset.cast_column("label", Value("int64"))
 
-    train, val, test = filter_and_tokenize(dataset, max_context)
+        train, val, test = filter_and_tokenize(dataset, max_context)
 
-    logger.info("Loading Dataloaders now...")
-    dataloaders = get_loaders(train, val, test, batch_size, use_weighted_sampler, epoch_sample_num, collate_fn)
-    logger.info("Successfully loaded all Dataloaders.")
+        logger.info("Loading Dataloaders now...")
+        dataloaders = get_loaders(train, val, test, batch_size, use_weighted_sampler, epoch_sample_num, collate_fn)
+        logger.info("Successfully loaded all Dataloaders.")
 
-    train_loader = dataloaders["train"]
-    val_loader = dataloaders["val"]
-    test_loader = dataloaders["test"]
-    train_eval_loader = dataloaders["train_eval"]
+        train_loader = dataloaders["train"]
+        val_loader = dataloaders["val"]
+        test_loader = dataloaders["test"]
+        train_eval_loader = dataloaders["train_eval"]
 
 
+        model = BertForSequenceClassification.from_pretrained(
+            bert_init,
+            num_labels=3,
+            problem_type="single_label_classification"
+        )
 
-    # TODO testen ob evtl für token classification bessere ergebnisse erzielt werden ?
-    # TODO roberta does not have token_type_ids
-    model = BertForSequenceClassification.from_pretrained(
-        bert_init,
-        num_labels=3,
-        problem_type="single_label_classification"
-    )
+
     model = model.to(gpu)
 
     optimizer = AdamW(model.parameters(), lr=bert_lr)

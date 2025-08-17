@@ -215,12 +215,13 @@ def parse_args():
     parser.add_argument('--checkpoint_dir', default=None,
                         help='checkpoint directory, [bert_init]_[dataset] if not specified')
 
+    parser.add_argument('--multilingual', type=bool, default=False)
+
     # only for finetune_context_bert
     parser.add_argument('--max_context_sentences', type=int, default=2)
 
     #only for finetune_token_bert
     parser.add_argument('--max_length', type=int, default=512, help='the max input length for bert')
-    parser.add_argument('--multilingual', type=bool, default=False)
 
     return parser.parse_args()
 
