@@ -218,7 +218,7 @@ def parse_args():
     parser.add_argument('--multilingual', type=bool, default=False)
 
     # only for finetune_context_bert
-    parser.add_argument('--max_context_sentences', type=int, default=2)
+    parser.add_argument('--max_context_sentences', type=int, default=3)
 
     #only for finetune_token_bert
     parser.add_argument('--max_length', type=int, default=512, help='the max input length for bert')
