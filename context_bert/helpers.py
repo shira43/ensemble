@@ -211,7 +211,7 @@ def parse_args():
     parser.add_argument('--bert_init', type=str, default='bert-base-uncased', choices=["roberta-base", "bert-base-uncased",
                                                                                   "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
                                                                                   "microsoft/deberta-v3-base",
-                                                                                  "deberta-v3-base", "deberta-base"])
+                                                                                  "deberta-v3-base", "deberta-base", "xlm-roberta-base"])
     parser.add_argument('--checkpoint_dir', default=None,
                         help='checkpoint directory, [bert_init]_[dataset] if not specified')
 
