@@ -269,7 +269,7 @@ if __name__ == "__main__":
         train_eval_loader = dataloaders["train_eval"]
 
 
-        model = BertForTokenClassification.from_pretrained(
+        model = AutoModelForTokenClassification.from_pretrained(
             bert_init,
             num_labels=5,
             id2label=id2label,
