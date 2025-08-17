@@ -140,6 +140,19 @@ def get_loaders(train_dataset, val_dataset, test_dataset, batch_size=128,
     return loaders
 
 
+def _make_inputs(batch, *, with_labels: bool):
+    inputs = {
+        "input_ids": batch["input_ids"],
+        "attention_mask": batch.get("attention_mask"),
+    }
+    if "token_type_ids" in batch:
+        inputs["token_type_ids"] = batch["token_type_ids"]
+    if with_labels:
+        inputs["labels"] = batch["labels"]
+    return inputs
+
+
+
 def training_step(engine, batch, model, optimizer):
 
     model.train()
@@ -147,12 +160,7 @@ def training_step(engine, batch, model, optimizer):
 
     optimizer.zero_grad()
 
-    outputs = model(
-        input_ids=batch["input_ids"],
-        attention_mask=batch["attention_mask"],
-        token_type_ids=batch["token_type_ids"],
-        labels=batch["labels"]  # one integer per example
-    )
+    outputs = model(**_make_inputs(batch, with_labels=True))
 
     loss = outputs.loss  # already CrossEntropyLoss
     logits = outputs.logits.detach()
@@ -176,11 +184,8 @@ def evaluation_step(engine, batch, model):
     with torch.no_grad():
         batch = {k: v.to(gpu) for k, v in batch.items()}
 
-        outputs = model(
-            input_ids=batch["input_ids"],
-            attention_mask=batch["attention_mask"],
-            token_type_ids=batch["token_type_ids"]
-        )
+        outputs = model(**_make_inputs(batch, with_labels=False))
+
         logits = outputs.logits
         if logits.dim() == 3 and logits.size(2) == 5: # 5 = num_labels for token classification
             logits = logits.permute(0, 2, 1)
@@ -213,8 +218,9 @@ def parse_args():
     # only for finetune_context_bert
     parser.add_argument('--max_context_sentences', type=int, default=2)
 
-    #only for finetune_sequence_bert
+    #only for finetune_token_bert
     parser.add_argument('--max_length', type=int, default=512, help='the max input length for bert')
+    parser.add_argument('--multilingual', type=bool, default=False)
 
     return parser.parse_args()
 

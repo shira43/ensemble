@@ -2,7 +2,8 @@ import logging
 from functools import partial
 from ignite.contrib.handlers import ProgressBar
 from ignite.metrics import Loss, Accuracy
-from transformers import AutoTokenizer, AdamW, BertForTokenClassification, DataCollatorForTokenClassification
+from transformers import AutoTokenizer, AdamW, BertForTokenClassification, DataCollatorForTokenClassification, \
+    AutoModelForTokenClassification
 from datasets import load_dataset, Dataset, Value
 import torch
 from torch.nn.functional import cross_entropy
@@ -94,6 +95,13 @@ def build_sequence(ds, max_seq_length=512):
     return Dataset.from_list(sequences)
 
 
+def set_pt_format(ds):
+    cols = ["input_ids", "attention_mask", "labels"]
+    if "token_type_ids" in ds.column_names:  # present for BERT etc., absent for RoBERTa/XLM-R
+        cols.append("token_type_ids")
+    ds.set_format(type="torch", columns=cols)
+
+
 def filter_and_tokenize(data, max_seq_length=512):
     """
         :param data: huggingface dataset with splits "train", "validation", "test", and columns "label" and "sentence_text" or "text"
@@ -116,9 +124,9 @@ def filter_and_tokenize(data, max_seq_length=512):
     test_dataset = build_sequence(test_set, max_seq_length)
 
     # turn to torch tensors for dataloader
-    cols = ["input_ids", "token_type_ids", "attention_mask", "labels"]
-    for ds in (train_dataset, val_dataset, test_dataset):
-        ds.set_format(type="torch", columns=cols)
+    set_pt_format(train_dataset)
+    set_pt_format(val_dataset)
+    set_pt_format(test_dataset)
 
     return train_dataset, val_dataset, test_dataset
 
@@ -195,6 +203,7 @@ if __name__ == "__main__":
     bert_lr = args.bert_lr
     use_weighted_sampler = args.use_weighted_sampler
     # is_save_model = args.is_save_model
+    use_multilingual = args.multilingual
     dataset = args.dataset
     bert_init = args.bert_init
     max_length = args.max_length
@@ -208,29 +217,67 @@ if __name__ == "__main__":
 
     logger.info("Initializing Tokenizer and Dataset.")
 
-    tokenizer = AutoTokenizer.from_pretrained(bert_init)
-    data_collator = DataCollatorForTokenClassification(tokenizer)
+    # If we want to test German OOD dataset performance -> multilingual model
+    if use_multilingual:
+        tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
+        data_collator = DataCollatorForTokenClassification(tokenizer)
 
-    dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
-    dataset = dataset.cast_column("label", Value("int64"))
+        dataset = load_dataset(f"43shira43/{dataset}", cache_dir="/tmp/hf_cache")
+        dataset = dataset.cast_column("label", Value("int64"))
 
-    train, val, test = filter_and_tokenize(dataset, max_length)
-    logger.info(len(train))
-    dataloaders = get_loaders(train, val, test, batch_size, use_weighted_sampler, epoch_sample_num, data_collator)
-    logger.info("Successfully loaded all Dataloaders.")
+        train, val, test = filter_and_tokenize(dataset, max_length)
+        logger.info(len(train))
 
-    train_loader = dataloaders["train"]
-    val_loader = dataloaders["val"]
-    test_loader = dataloaders["test"]
-    train_eval_loader = dataloaders["train_eval"]
+        german = load_dataset("43shira43/coauthor-german", split="test")
+        # filter out label -1 and add column tokens which stores input_ids of tokenizer to test set
+        test_set = german.filter(lambda example: example["label"] in [0, 1, 2]).map(tokenization, batched=True)
+        test_dataset = build_sequence(test_set, max_length)
+        set_pt_format(test_dataset)
+        test = test_dataset
+
+        dataloaders = get_loaders(train, val, test, batch_size, use_weighted_sampler, epoch_sample_num, data_collator)
+        logger.info("Successfully loaded all Dataloaders.")
+
+        train_loader = dataloaders["train"]
+        val_loader = dataloaders["val"]
+        test_loader = dataloaders["test"]
+        train_eval_loader = dataloaders["train_eval"]
+
+        model = AutoModelForTokenClassification.from_pretrained(
+            "xlm-roberta-base",
+            num_labels=5,
+            id2label=id2label,
+            label2id={v: k for k, v in id2label.items()}
+        )
+
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(bert_init)
+        data_collator = DataCollatorForTokenClassification(tokenizer)
+
+        dataset = load_dataset(f"43shira43/{dataset}",cache_dir="/tmp/hf_cache")
+        dataset = dataset.cast_column("label", Value("int64"))
+
+        train, val, test = filter_and_tokenize(dataset, max_length)
+        logger.info(len(train))
+
+        dataloaders = get_loaders(train, val, test, batch_size, use_weighted_sampler, epoch_sample_num, data_collator)
+        logger.info("Successfully loaded all Dataloaders.")
+
+        train_loader = dataloaders["train"]
+        val_loader = dataloaders["val"]
+        test_loader = dataloaders["test"]
+        train_eval_loader = dataloaders["train_eval"]
 
 
-    model = BertForTokenClassification.from_pretrained(
-        bert_init,
-        num_labels=5,
-        id2label=id2label,
-        label2id={v: k for k, v in id2label.items()}
-    )
+        model = BertForTokenClassification.from_pretrained(
+            bert_init,
+            num_labels=5,
+            id2label=id2label,
+            label2id={v: k for k, v in id2label.items()}
+        )
+
+
+
 
     model = model.to(gpu)
 
