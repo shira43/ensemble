@@ -219,7 +219,7 @@ if __name__ == "__main__":
 
     # If we want to test German OOD dataset performance -> multilingual model
     if use_multilingual:
-        tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
+        tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
         data_collator = DataCollatorForTokenClassification(tokenizer)
 
         dataset = load_dataset(f"43shira43/{dataset}", cache_dir="/tmp/hf_cache")
@@ -244,7 +244,7 @@ if __name__ == "__main__":
         train_eval_loader = dataloaders["train_eval"]
 
         model = AutoModelForTokenClassification.from_pretrained(
-            "xlm-roberta-base",
+            "bert-base-uncased",
             num_labels=5,
             id2label=id2label,
             label2id={v: k for k, v in id2label.items()}
