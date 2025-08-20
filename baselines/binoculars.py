@@ -1,3 +1,5 @@
+import argparse
+
 import torch
 import numpy as np
 from transformers.tokenization_utils_base import BatchEncoding
@@ -178,24 +180,23 @@ class Binoculars(DetectorABC):
         }
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', type=str, default='coauthor-zeng', choices=['coauthor-zeng', 'coauthor-extended-np'])
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
-
-    import os
-    from pathlib import Path
     import gc
     from datasets import load_dataset, disable_caching
 
+    args = parse_args()
+    dataset_name = f"43shira43/{args.dataset}"
+
     logging.info("Program started.")
 
-    # logging.info("Setting jsonl file path.")
-    # jsonl_path = Path(__file__).resolve().parent.parent / "testSeq.jsonl"
-    #data = load_dataset("json", data_files=str(jsonl_path), split="train")
-
-
     logging.info("Loading dataset.")
-    data = load_dataset("43shira43/coauthor-extended-np", split="test")
+    data = load_dataset(dataset_name, split="test")
 
     logging.info("Dataset loaded as Huggingface Dataset.")
     #requires text field
@@ -222,10 +223,6 @@ if __name__ == "__main__":
             torch.cuda.synchronize()
             torch.cuda.empty_cache()
             gc.collect()
-
-    # def run_binoculars():
-    #     disable_caching()
-    #     return run_detector(Binoculars(), data, batch_size=16)
 
 
     scores_binoculars = run_binoculars()

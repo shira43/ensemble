@@ -3,7 +3,7 @@ import torch as th
 from transformers import AutoModel, AutoTokenizer
 import torch.nn.functional as F
 from ignite.metrics import MetricsLambda
-from finetune_bert import get_init_local_bert_path, get_predict_lable_dic, save_test_dataset_data
+from finetune_bert_weighted import get_init_local_bert_path, get_predict_lable_dic, save_test_dataset_data
 
 from utils import *
 import dgl

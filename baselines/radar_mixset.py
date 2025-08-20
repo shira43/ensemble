@@ -1,3 +1,4 @@
+import argparse
 import logging
 
 from datasets import load_dataset, Value, DatasetDict
@@ -140,6 +141,10 @@ def run_radar(data, DEVICE, finetune: bool = False, no_auc: bool = False, ckpt_d
 
     return {"Radar_retrained" if finetune else "Radar": dict_after}
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', type=str, default='coauthor-zeng', choices=['coauthor-zeng', 'coauthor-extended-np'])
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
@@ -148,12 +153,14 @@ if __name__ == "__main__":
         format="%(asctime)s [%(levelname)s] %(message)s"
     )
 
+    args = parse_args()
+    dataset_name = f"43shira43/{args.dataset}"
 
     #Load dataset and filter out every thing that is not in label 0,1,2 and turn float into int for labels.
     def is_valid_label(example):
         return example["label"] in [0, 1, 2]
 
-    dataset = load_dataset("43shira43/coauthor-extended-np")
+    dataset = load_dataset(dataset_name)
 
     filtered_dataset = DatasetDict({
         split: ds.filter(is_valid_label)

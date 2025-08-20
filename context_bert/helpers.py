@@ -215,6 +215,7 @@ def parse_args():
     parser.add_argument('--checkpoint_dir', default=None,
                         help='checkpoint directory, [bert_init]_[dataset] if not specified')
 
+    # sets if the dataset should be tested on the OOD german dataset (coauthor-german)
     parser.add_argument('--multilingual', type=bool, default=False)
 
     # only for finetune_context_bert
